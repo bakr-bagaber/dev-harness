@@ -78,7 +78,7 @@ if command -v npm &>/dev/null; then
   fi
 fi
 
-# Option B: install directly from GitHub (no npm publish needed)
+# Option B: install directly from GitHub (fallback)
 if command -v npm &>/dev/null; then
   echo "==> Installing from GitHub..."
   npm install -g "${GIT_URL}" 2>/dev/null || true
@@ -130,9 +130,9 @@ fi
 echo ""
 echo "==> All install methods failed. Try:"
 echo ""
-echo "    npm install -g ${NPM_PACKAGE}
+echo "    npm install -g ${NPM_PACKAGE}"
 echo ""
-echo "    npx ${NPM_PACKAGE} --help
+echo "    npx ${NPM_PACKAGE} --help"
 echo ""
 echo "Or clone and install:"
 echo ""
