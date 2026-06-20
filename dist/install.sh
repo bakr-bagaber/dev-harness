@@ -23,7 +23,7 @@ INSTALL_DIR="/usr/local/bin"
 VERSION="latest"
 REPO="bakr-bagaber/dev-harness"
 GIT_URL="https://github.com/${REPO}.git"
-NPX_PKG="github:${REPO}"
+NPM_PACKAGE="dev-harness-cli"
 CLI_NAME="harness-dev"
 SOURCE_URL="https://raw.githubusercontent.com/${REPO}/main"
 
@@ -49,7 +49,7 @@ done
 if ! command -v node &>/dev/null; then
   echo "Error: Node.js is required but not found."
   echo "  Install: https://nodejs.org/en/download/"
-  echo "  Or use:  npx github:${REPO} --help"
+  echo "  Or use:  npx ${NPM_PACKAGE} --help"
   exit 1
 fi
 
@@ -62,19 +62,35 @@ fi
 # ── Determine install method ──────────────────────────────────────────────────
 echo "==> Installing ${CLI_NAME} (${VERSION}) to ${INSTALL_DIR}"
 
-# Option A: install via npm directly from GitHub (no npm publish needed)
+# Option A: npm global (preferred — published to npmjs.com)
 if command -v npm &>/dev/null; then
-  echo "==> Installing via npm from GitHub..."
-  npm install -g "${GIT_URL}" 2>/dev/null || true
+  echo "==> Installing via npm..."
+  if [[ "$VERSION" == "latest" ]]; then
+    npm install -g "${NPM_PACKAGE}" 2>/dev/null || true
+  else
+    npm install -g "${NPM_PACKAGE}@${VERSION}" 2>/dev/null || true
+  fi
 
   if command -v "${CLI_NAME}" &>/dev/null; then
-    echo "==> ${CLI_NAME} installed successfully via npm from GitHub!"
+    echo "==> ${CLI_NAME} installed successfully via npm!"
     "${CLI_NAME}" --help
     exit 0
   fi
 fi
 
-# Option B: direct download from GitHub raw (curl/wget)
+# Option B: install directly from GitHub (no npm publish needed)
+if command -v npm &>/dev/null; then
+  echo "==> Installing from GitHub..."
+  npm install -g "${GIT_URL}" 2>/dev/null || true
+
+  if command -v "${CLI_NAME}" &>/dev/null; then
+    echo "==> ${CLI_NAME} installed from GitHub!"
+    "${CLI_NAME}" --help
+    exit 0
+  fi
+fi
+
+# Option C: direct download from GitHub raw (curl/wget)
 echo "==> Attempting direct download from GitHub..."
 
 # Try system bin first, fall back to ~/.local/bin
@@ -112,9 +128,11 @@ fi
 
 # ── Fallback: instructions ────────────────────────────────────────────────────
 echo ""
-echo "==> All install methods failed. Use directly from GitHub:"
+echo "==> All install methods failed. Try:"
 echo ""
-echo "    npx github:${REPO} init --help"
+echo "    npm install -g ${NPM_PACKAGE}
+echo ""
+echo "    npx ${NPM_PACKAGE} --help
 echo ""
 echo "Or clone and install:"
 echo ""
