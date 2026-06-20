@@ -3,9 +3,9 @@
 **Agent-agnostic development pipeline CLI.** Scaffold, phase orchestrate, gate validate, and iterate any software project — works with any coding agent (Claude Code, Codex, OpenCode, Cursor, etc.).
 
 ```bash
-npx dev-harness-cli init --stack python --target my-project
+npx github:bakr-bagaber/dev-harness init --stack python --target my-project
 cd my-project
-npx dev-harness-cli phase define
+npx github:bakr-bagaber/dev-harness phase define
 ```
 
 ## Install
