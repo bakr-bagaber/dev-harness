@@ -18,14 +18,14 @@
     "node": ">=18"
   },
   "license": "MIT",
-  "author": "Bakr Bagaber",
+  "author": "Nous Research",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bakr-bagaber/dev-harness"
+    "url": "https://github.com/nousresearch/dev-harness"
   },
-  "homepage": "https://github.com/bakr-bagaber/dev-harness#readme",
+  "homepage": "https://github.com/nousresearch/dev-harness#readme",
   "bugs": {
-    "url": "https://github.com/bakr-bagaber/dev-harness/issues"
+    "url": "https://github.com/nousresearch/dev-harness/issues"
   },
   "keywords": [
     "harness",
@@ -37,8 +37,17 @@
     "cli"
   ],
   "scripts": {
+    "lint": "eslint cli/",
+    "lint:fix": "eslint cli/ --fix",
     "check": "node --check cli/harness-dev.mjs && echo 'Syntax OK'",
+    "test": "node test/run-all.mjs",
+    "test:verbose": "node test/run-all.mjs --verbose",
+    "prepublishOnly": "npm run lint && npm run test",
     "postinstall": "node -e \"try{process.stdout.write('harness-dev installed. Run: npx harness-dev --help\\n')}catch(e){}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0"
   },
   "publishConfig": {
     "access": "public"

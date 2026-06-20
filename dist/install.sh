@@ -4,9 +4,9 @@
 # install.sh — Dev Harness CLI one-liner installer
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/bakr-bagaber/dev-harness/main/dist/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/bakr-bagaber/dev-harness/main/dist/install.sh | bash -s -- --version 0.2.0
-#   curl -fsSL https://raw.githubusercontent.com/bakr-bagaber/dev-harness/main/dist/install.sh | bash -s -- --prefix ~/bin
+#   curl -fsSL https://dev-harness.dev/install.sh | bash
+#   curl -fsSL https://dev-harness.dev/install.sh | bash -s -- --version 0.2.0
+#   curl -fsSL https://dev-harness.dev/install.sh | bash -s -- --prefix ~/bin
 #
 # Detects OS + architecture, downloads the latest (or specified) release
 # from GitHub, and installs to /usr/local/bin (or custom prefix).
@@ -21,7 +21,7 @@ set -euo pipefail
 # ── Defaults ──────────────────────────────────────────────────────────────────
 INSTALL_DIR="/usr/local/bin"
 VERSION="latest"
-REPO="bakr-bagaber/dev-harness"
+REPO="nousresearch/dev-harness"
 CLI_NAME="harness-dev"
 SOURCE_URL="https://raw.githubusercontent.com/${REPO}/main"
 
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
     --prefix) INSTALL_DIR="$2"; shift 2 ;;
     --version) VERSION="$2"; shift 2 ;;
     --help)
-      echo "Usage: curl -fsSL https://raw.githubusercontent.com/bakr-bagaber/dev-harness/main/dist/install.sh | bash -s -- [options]"
+      echo "Usage: curl -fsSL https://dev-harness.dev/install.sh | bash -s -- [options]"
       echo ""
       echo "Options:"
       echo "  --prefix <dir>  Install to <dir> instead of /usr/local/bin"
