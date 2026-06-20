@@ -18,6 +18,7 @@ import { loadConfig } from './state.mjs';
 import { getStackMeta, detectStack } from './detect-stack.mjs';
 import { validateContract } from './contract.mjs';
 import { execGitCheck as execCheck } from './git.mjs';
+import { CONFIG_PATH, RUBRIC_PATH, ARCHITECTURE_PATH, DECISIONS_PATH, HARNESS_DIR } from './paths.mjs';
 import { COVERAGE_TIMEOUT, COVERAGE_THRESHOLD_DEFAULT } from './constants.mjs';
 
 function getStackLabel(targetDir) {
@@ -38,12 +39,12 @@ function checkGitRepo(targetDir) {
 }
 
 function checkConfigExists(targetDir) {
-  const cfgPath = resolve(targetDir, 'harness-config.json');
+  const cfgPath = CONFIG_PATH(targetDir);
   const exists = existsSync(cfgPath);
   return {
     name: 'config-exists',
     pass: exists,
-    detail: exists ? 'harness-config.json present' : 'Missing: harness-config.json',
+    detail: exists ? 'harness/config.json present' : 'Missing: harness/config.json',
   };
 }
 
@@ -177,11 +178,11 @@ function checkContractAgreed(targetDir) {
 
 /** Check that evaluator-rubric.md exists in the project. */
 function checkRubricExists(targetDir) {
-  const found = existsSync(resolve(targetDir, 'evaluator-rubric.md'));
+  const found = existsSync(RUBRIC_PATH(targetDir));
   return {
     name: 'rubric-exists',
     pass: found,
-    detail: found ? 'evaluator-rubric.md found' : 'evaluator-rubric.md missing — run init to scaffold',
+    detail: found ? 'harness/evaluator-rubric.md found' : 'harness/evaluator-rubric.md missing — run init to scaffold',
   };
 }
 
@@ -291,7 +292,7 @@ function checkChangelogContent(targetDir) {
 
 /** Check that ARCHITECTURE.md is filled in (if file exists, not just stub). */
 function checkArchitectureDoc(targetDir) {
-  const archPath = resolve(targetDir, 'ARCHITECTURE.md');
+  const archPath = ARCHITECTURE_PATH(targetDir);
   if (!existsSync(archPath)) {
     return { name: 'architecture-doc', pass: true, detail: 'ARCHITECTURE.md not present (optional)' };
   }
@@ -304,7 +305,7 @@ function checkArchitectureDoc(targetDir) {
 
 /** Check that DECISIONS.md has at least one recorded decision (if file exists). */
 function checkDecisionsLogged(targetDir) {
-  const decPath = resolve(targetDir, 'DECISIONS.md');
+  const decPath = DECISIONS_PATH(targetDir);
   if (!existsSync(decPath)) {
     return { name: 'decisions-logged', pass: true, detail: 'DECISIONS.md not present (optional)' };
   }

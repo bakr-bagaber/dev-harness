@@ -112,6 +112,42 @@ export function discoverTemplates() {
 }
 
 /**
+ * Map a template's relative path to its output path under harness/.
+ * Templates that are harness-managed go into harness/ subfolders.
+ * AGENTS.md stays in project root (agent tools expect it there).
+ *
+ * Mapping:
+ *   AGENTS.md                  → AGENTS.md (root)
+ *   harness-config.json        → harness/config.json
+ *   progress.md                → harness/progress.md
+ *   sprint-contract.md         → harness/sprint-contract.md
+ *   evaluator-rubric.md        → harness/evaluator-rubric.md
+ *   init.sh / init.ps1         → harness/scripts/init.sh
+ *   ci/*                       → harness/ci/*
+ *   docs/*                     → harness/docs/*
+ *
+ * @param {string} relPath — relative path within templates/
+ * @returns {string} — relative output path within target
+ */
+function mapTemplateOutput(relPath) {
+  // AGENTS.md stays in root
+  if (relPath === 'AGENTS.md') return relPath;
+  // harness-config.json → harness/config.json
+  if (relPath === 'harness-config.json') return 'harness/config.json';
+  // Top-level harness files → harness/
+  const harnessRootFiles = ['progress.md', 'sprint-contract.md', 'evaluator-rubric.md'];
+  if (harnessRootFiles.includes(relPath)) return `harness/${relPath}`;
+  // init scripts → harness/scripts/
+  if (relPath === 'init.sh' || relPath === 'init.ps1') return `harness/scripts/${relPath}`;
+  // ci/ → harness/ci/
+  if (relPath.startsWith('ci/')) return `harness/${relPath}`;
+  // docs/ → harness/docs/
+  if (relPath.startsWith('docs/')) return `harness/${relPath}`;
+  // Default: put under harness/
+  return `harness/${relPath}`;
+}
+
+/**
  * Run the template engine.
  *
  * @param {object} opts
@@ -147,7 +183,8 @@ export function generateTemplates(opts) {
     const relativePath = tmplPath.startsWith(TEMPLATES_DIR + '/')
       ? tmplPath.slice(TEMPLATES_DIR.length + 1)
       : basename(tmplPath);
-    const outPath = join(target, relativePath);
+    const outputRel = mapTemplateOutput(relativePath);
+    const outPath = join(target, outputRel);
     const outDir = dirname(outPath);
 
     try {

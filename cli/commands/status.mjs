@@ -61,7 +61,7 @@ export default async function statusCommand(args) {
       status: 'ok',
       message: configOk
         ? `Phase: ${phase || 'not started'}, Stack: ${stack.label}`
-        : 'No harness-config.json found — run harness-dev init',
+        : 'No harness/config.json found — run harness-dev init',
       project: basename(targetDir),
       stack: stack.name,
       stackLabel: stack.label,
@@ -84,7 +84,7 @@ export default async function statusCommand(args) {
 
   // ── Human-readable output ─────────────────────────────────────────────
   let out = '';
-  out += '═══ dev-harness Status ═══\n';
+  out += '═══ harness Status ═══\n';
   out += line('Project:', basename(targetDir)) + '\n';
   out += line('Stack:', `${stack.label}${stack.name !== 'generic' ? '' : ' (not detected)'}`) + '\n';
   out += line('Mode:', modeLabel(mode)) + '\n';
@@ -104,7 +104,7 @@ export default async function statusCommand(args) {
     out += '  Phase: not started.\n';
     out += '\n';
   } else {
-    out += '  No harness-config.json found.\n';
+    out += '  No harness/config.json found.\n';
     out += '\n';
   }
 

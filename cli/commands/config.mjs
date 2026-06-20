@@ -75,7 +75,7 @@ export default async function configCommand(args) {
     // Human output — grouped table
     process.stdout.write('═══ Harness Configuration ═══\n\n');
     if (!ok) {
-      process.stdout.write('  No harness-config.json found. Run: harness-dev init\n\n');
+      process.stdout.write('  No harness/config.json found. Run: harness-dev init\n\n');
       return;
     }
 

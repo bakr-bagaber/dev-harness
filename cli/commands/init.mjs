@@ -144,16 +144,16 @@ export default async function initCommand(args) {
   const harnessPaths = [];
   const projectPaths = [];
 
-  // Template files — known template names
+  // Template files — known template names (mapped to harness/ paths by templates.mjs)
   const templateNames = [
-    'AGENTS.md', 'harness-config.json', 'init.sh',
-    'progress.md', 'sprint-contract.md', 'evaluator-rubric.md',
+    'AGENTS.md', 'harness/config.json', 'harness/scripts/init.sh',
+    'harness/progress.md', 'harness/sprint-contract.md', 'harness/evaluator-rubric.md',
   ];
   for (const name of templateNames) {
     harnessPaths.push(join(targetDir, name));
   }
 
-  // Extra scaffold files
+  // Extra scaffold files (already have harness/ prefix from getExtraFiles)
   for (const relPath of Object.keys(extraFiles)) {
     harnessPaths.push(join(targetDir, relPath));
   }
@@ -289,15 +289,15 @@ export default async function initCommand(args) {
       }
     }
 
-    // Set agentTool in the generated harness-config.json
-    const configPath = join(targetDir, 'harness-config.json');
+    // Set agentTool in the generated harness/config.json
+    const configPath = join(targetDir, 'harness', 'config.json');
     if (existsSync(configPath)) {
       try {
         const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
         cfg.agentTool = agentTool;
         writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
       } catch (err) {
-        errors.push(`harness-config.json agentTool: ${err.message}`);
+        errors.push(`harness/config.json agentTool: ${err.message}`);
       }
     }
   }

@@ -37,7 +37,11 @@
     "cli"
   ],
   "scripts": {
+    "lint": "eslint cli/",
+    "lint:fix": "eslint cli/ --fix",
     "check": "node --check cli/harness-dev.mjs && echo 'Syntax OK'",
+    "test": "node test/run-all.mjs",
+    "test:verbose": "node test/run-all.mjs --verbose",
     "postinstall": "node -e \"try{process.stdout.write('harness-dev installed. Run: npx harness-dev --help\\n')}catch(e){}\""
   },
   "devDependencies": {

@@ -1,8 +1,8 @@
-# Harness scaffold
-harness-config.json
-feature_list.json
-feature-list.schema.json
-progress.md
+# Harness scaffold — only ignore root-level generated files (not templates)
+/harness-config.json
+/feature_list.json
+/feature-list.schema.json
+/progress.md
 
 # Node
 node_modules/

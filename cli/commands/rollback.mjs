@@ -161,9 +161,9 @@ export default async function rollbackCommand(args) {
 
     // Restore all files from the checkpoint
     const restoreFiles = [
-      'harness-config.json',
-      'progress.md',
-      'feature_list.json',
+      'harness/config.json',
+      'harness/progress.md',
+      'harness/features/feature-list.json',
     ];
 
     // First, restore the whole working tree from the tag

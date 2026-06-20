@@ -20,12 +20,13 @@ import { parseCommandArgs } from '../lib/command-helpers.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
 import { loadConfig } from '../lib/state.mjs';
 import { getAllDetectionSignatures, AGENTS_MD_TOOLS, TOOL_REGISTRY } from '../lib/tool-registry.mjs';
+import { AGENTS_PATH } from '../lib/paths.mjs';
 
 export default async function detectToolCommand(args) {
   const { json, targetDir } = parseCommandArgs(args);
 
   const detected = [];
-  const hasAgentsMd = existsSync(resolve(targetDir, 'AGENTS.md'));
+  const hasAgentsMd = existsSync(AGENTS_PATH(targetDir));
 
   // 1. Scan for tool-specific detection files (from registry)
   for (const { tool, file } of getAllDetectionSignatures()) {
