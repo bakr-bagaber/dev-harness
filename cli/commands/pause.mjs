@@ -4,7 +4,7 @@
  * Sets config.paused = true. The outer loop checks this
  * before starting a new phase in autopilot mode.
  *
- * Usage: harness-dev pause [--json]
+ * Usage: dev-harness pause [--json]
  */
 import { set } from '../lib/state.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';

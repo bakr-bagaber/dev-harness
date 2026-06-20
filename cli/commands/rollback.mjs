@@ -13,7 +13,7 @@
  *   manual/<label>   — User-created manual checkpoints
  *   recovery/*       — Recovery branches (for informational display)
  *
- * Usage: harness-dev rollback <subcommand> [checkpoint]
+ * Usage: dev-harness rollback <subcommand> [checkpoint]
  */
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { execGit, getGitRoot } from '../lib/git.mjs';
@@ -67,12 +67,12 @@ export default async function rollbackCommand(args) {
   const sub = args.subcommand;
 
   if (!sub || !SUBCOMMANDS.includes(sub)) {
-    die(new CliError(`Usage: harness-dev rollback ${SUBCOMMANDS.join('|')}`, EXIT.USAGE_ERROR), json);
+    die(new CliError(`Usage: dev-harness rollback ${SUBCOMMANDS.join('|')}`, EXIT.USAGE_ERROR), json);
     return;
   }
 
   if (sub !== 'list' && args.positionals.length < 1) {
-    die(new CliError(`Usage: harness-dev rollback ${sub} <checkpoint>`, EXIT.USAGE_ERROR), json);
+    die(new CliError(`Usage: dev-harness rollback ${sub} <checkpoint>`, EXIT.USAGE_ERROR), json);
     return;
   }
 
@@ -118,7 +118,7 @@ export default async function rollbackCommand(args) {
     } else {
       if (checkpoints.length === 0 && recoveryBranches.length === 0) {
         process.stdout.write('No checkpoints found. Phase tags (phase/*) and iteration tags (iter/*) are created automatically when auto-tagging is enabled.\n');
-        process.stdout.write('Manual checkpoints: harness-dev checkpoint create <label>\n');
+        process.stdout.write('Manual checkpoints: dev-harness checkpoint create <label>\n');
       } else {
         if (checkpoints.length > 0) {
           process.stdout.write('Checkpoints:\n');
@@ -146,7 +146,7 @@ export default async function rollbackCommand(args) {
     // Verify the tag exists
     const tagCheck = execGit(`git rev-parse --verify "${checkpoint}^{commit}"`, gitRoot);
     if (!tagCheck.ok) {
-      const msg = `Checkpoint "${checkpoint}" not found. Run: harness-dev rollback list`;
+      const msg = `Checkpoint "${checkpoint}" not found. Run: dev-harness rollback list`;
       if (json) {
         process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'to', checkpoint, status: 'error', message: msg }) + '\n');
       } else {
@@ -205,7 +205,7 @@ export default async function rollbackCommand(args) {
     // Verify the tag exists
     const tagCheck = execGit(`git rev-parse --verify "${checkpoint}^{commit}"`, gitRoot);
     if (!tagCheck.ok) {
-      const msg = `Checkpoint "${checkpoint}" not found. Run: harness-dev rollback list`;
+      const msg = `Checkpoint "${checkpoint}" not found. Run: dev-harness rollback list`;
       if (json) {
         process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'branch', checkpoint, status: 'error', message: msg }) + '\n');
       } else {

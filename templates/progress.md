@@ -10,7 +10,7 @@ Retry Count: 0/{{maxRetries}}
 
 ## Lessons
 
-<!-- Use \`harness-dev learn "lesson here"\` to add lessons. -->
+<!-- Use \`dev-harness learn "lesson here"\` to add lessons. -->
 
 ## Checkpoints
 

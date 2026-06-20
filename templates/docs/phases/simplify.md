@@ -20,14 +20,14 @@ must not break the feature's acceptance criteria.
 1. Read `progress.md` and `AGENTS.md`.
 2. For each feature: review the implementation, propose deletions/renames.
 3. Apply simplifications.
-4. Re-run `harness-dev validate --feature <name>` — criteria must still pass.
+4. Re-run `dev-harness validate --feature <name>` — criteria must still pass.
 5. On pass: commit, append lesson.
 6. On fail (≤ `maxRetries`): revert and retry.
 7. On fail (> `maxRetries`): escalate.
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -37,4 +37,4 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: `harness-dev phase review` (Simplifier → multi-agent committee).
+On gate pass: `dev-harness phase review` (Simplifier → multi-agent committee).

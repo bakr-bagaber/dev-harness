@@ -21,14 +21,14 @@ fresh context. Only when all features pass does the phase gate run.
 1. Read `progress.md`, `AGENTS.md`, `sprint-contract.md`.
 2. Pick next feature where `passes === false`.
 3. Implement the feature's tasks.
-4. Run `harness-dev validate --feature <name> --task <id>` per task.
+4. Run `dev-harness validate --feature <name> --task <id>` per task.
 5. On pass: mark feature `passes: true`, commit, append lesson to `progress.md`.
 6. On fail (≤ `maxRetries`): retry with fresh context (git reset if `--git-ops`).
 7. On fail (> `maxRetries`): escalate to human.
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -38,4 +38,4 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: `harness-dev phase verify` (Generator → Evaluator).
+On gate pass: `dev-harness phase verify` (Generator → Evaluator).

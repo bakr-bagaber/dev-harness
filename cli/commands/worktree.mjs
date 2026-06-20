@@ -8,7 +8,7 @@
  *   prune           — git worktree prune (remove orphaned metadata)
  *   remove <name>   — git worktree remove + optionally delete branch
  *
- * Usage: harness-dev worktree <subcommand> [name] [options]
+ * Usage: dev-harness worktree <subcommand> [name] [options]
  */
 import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -25,13 +25,13 @@ export default async function worktreeCommand(args) {
   const sub = args.subcommand;
 
   if (!sub || !SUBCOMMANDS.includes(sub)) {
-    die(new CliError(`Usage: harness-dev worktree ${SUBCOMMANDS.join('|')}`, EXIT.USAGE_ERROR), json);
+    die(new CliError(`Usage: dev-harness worktree ${SUBCOMMANDS.join('|')}`, EXIT.USAGE_ERROR), json);
     return;
   }
 
   const gitRoot = getGitRoot(targetDir);
   if (!gitRoot) {
-    const msg = 'Not inside a git repository. Run: git init first or harness-dev init';
+    const msg = 'Not inside a git repository. Run: git init first or dev-harness init';
     if (json) {
       process.stdout.write(JSON.stringify({ command: 'worktree', subcommand: sub, status: 'error', message: msg }) + '\n');
     } else {
@@ -44,7 +44,7 @@ export default async function worktreeCommand(args) {
   if (sub === 'create') {
     const name = args.positionals[0];
     if (!name) {
-      die(new CliError('Usage: harness-dev worktree create <name>', EXIT.USAGE_ERROR), json);
+      die(new CliError('Usage: dev-harness worktree create <name>', EXIT.USAGE_ERROR), json);
       return;
     }
 
@@ -88,7 +88,7 @@ export default async function worktreeCommand(args) {
 
     // Scaffold harness in the new worktree — run full init with parent's detected stack
     const stack = detectStack(worktreePath).name;
-    const harnessDevPath = new URL('../harness-dev.mjs', import.meta.url).pathname;
+    const harnessDevPath = new URL('../dev-harness.mjs', import.meta.url).pathname;
     const initResult = execGit(
       `node "${harnessDevPath}" init --stack "${stack}" --force --no-git --json`,
       worktreePath,
@@ -232,7 +232,7 @@ export default async function worktreeCommand(args) {
   if (sub === 'remove') {
     const name = args.positionals[0];
     if (!name) {
-      die(new CliError('Usage: harness-dev worktree remove <name>', EXIT.USAGE_ERROR), json);
+      die(new CliError('Usage: dev-harness worktree remove <name>', EXIT.USAGE_ERROR), json);
       return;
     }
 

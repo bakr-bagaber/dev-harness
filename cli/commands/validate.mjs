@@ -5,15 +5,15 @@
  * Otherwise runs phase-specific checks and reports results.
  *
  * Usage:
- *   harness-dev validate              — check current phase
- *   harness-dev validate --json       — machine-readable output
- *   harness-dev validate --phase X    — check specific phase
+ *   dev-harness validate              — check current phase
+ *   dev-harness validate --json       — machine-readable output
+ *   dev-harness validate --phase X    — check specific phase
  *
  * Examples:
- *   harness-dev validate
+ *   dev-harness validate
  *   # → BUILD Gate: PASS — 3/3 checks pass
  *
- *   harness-dev validate --json
+ *   dev-harness validate --json
  *   # → {"phase":"build","checks":[...],"overall":false,"failures":["lint"]}
  */
 import { resolve } from 'node:path';
@@ -53,7 +53,7 @@ export default async function validateCommand(args) {
       if (task) { out.task = task; }
       process.stdout.write(JSON.stringify(out) + '\n');
     } else {
-      process.stdout.write('Gates disabled. Enable with: harness-dev config set gates.enabled true\n');
+      process.stdout.write('Gates disabled. Enable with: dev-harness config set gates.enabled true\n');
     }
     return;
   }
@@ -62,7 +62,7 @@ export default async function validateCommand(args) {
   if (!phase) {
     die(
       new CliError(
-        'No phase found in config. Run: harness-dev init or harness-dev phase <name>',
+        'No phase found in config. Run: dev-harness init or dev-harness phase <name>',
         EXIT.VALIDATION_FAILURE,
       ),
       json,

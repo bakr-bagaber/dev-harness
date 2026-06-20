@@ -24,7 +24,7 @@ VERSION="latest"
 REPO="bakr-bagaber/dev-harness"
 GIT_URL="https://github.com/${REPO}.git"
 NPM_PACKAGE="dev-harness-cli"
-CLI_NAME="harness-dev"
+CLI_NAME="dev-harness"
 SOURCE_URL="https://raw.githubusercontent.com/${REPO}/main"
 
 # ── Parse options ─────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ fi
 echo "==> Attempting direct download from GitHub..."
 
 # Try system bin first, fall back to ~/.local/bin
-DOWNLOAD_URL="${SOURCE_URL}/cli/harness-dev.mjs"
+DOWNLOAD_URL="${SOURCE_URL}/cli/dev-harness.mjs"
 if [[ -d "${INSTALL_DIR}" && -w "${INSTALL_DIR}" ]]; then
   TARGET="${INSTALL_DIR}/${CLI_NAME}"
 elif [[ -d "$HOME/.local/bin" && -w "$HOME/.local/bin" ]]; then

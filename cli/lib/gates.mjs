@@ -5,7 +5,7 @@
  * that return { name, pass, detail }.
  *
  * Phase gates are disabled by default (gates.enabled: false).
- * Run via: harness-dev validate
+ * Run via: dev-harness validate
  *
  * Usage:
  *   import { runChecks, getPhase } from './gates.mjs';

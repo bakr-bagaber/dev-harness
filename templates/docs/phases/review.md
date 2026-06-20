@@ -27,7 +27,7 @@ overall verdict: Accept / Revise / Block.
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -39,4 +39,4 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: `harness-dev phase ship` (committee → release).
+On gate pass: `dev-harness phase ship` (committee → release).

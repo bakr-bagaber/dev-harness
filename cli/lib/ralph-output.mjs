@@ -171,7 +171,7 @@ export function buildDeliverableRetryOutput(phase, mode, maxRetries, resetOnRetr
   }
 
   out += `\n`;
-  out += `When done, run: harness-dev validate\n`;
+  out += `When done, run: dev-harness validate\n`;
   if (resetOnRetry) {out += `Git reset on retry: enabled\n`;}
   if (autoCommit) {out += `Auto-commit: enabled\n`;}
   return out;

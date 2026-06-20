@@ -4,16 +4,16 @@
  * Uses state.mjs for dot-notation read/write with persistence.
  *
  * Usage:
- *   harness-dev config list              — list all parameters with descriptions
- *   harness-dev config get [key]         — get a value or all config
- *   harness-dev config set <key> <value> — set a value
+ *   dev-harness config list              — list all parameters with descriptions
+ *   dev-harness config get [key]         — get a value or all config
+ *   dev-harness config set <key> <value> — set a value
  *
  * Examples:
- *   harness-dev config list
- *   harness-dev config list --json
- *   harness-dev config get gates.enabled
- *   harness-dev config set gates.enabled true
- *   harness-dev config set maxRetries 5
+ *   dev-harness config list
+ *   dev-harness config list --json
+ *   dev-harness config get gates.enabled
+ *   dev-harness config set gates.enabled true
+ *   dev-harness config set maxRetries 5
  */
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
@@ -29,7 +29,7 @@ export default async function configCommand(args) {
 
   if (!sub || (sub !== 'get' && sub !== 'set' && sub !== 'list')) {
     die(new CliError(
-      'Usage: harness-dev config list | config get [key] | config set <key> <value>',
+      'Usage: dev-harness config list | config get [key] | config set <key> <value>',
       EXIT.USAGE_ERROR,
     ), json);
     return;
@@ -75,7 +75,7 @@ export default async function configCommand(args) {
     // Human output — grouped table
     process.stdout.write('═══ Harness Configuration ═══\n\n');
     if (!ok) {
-      process.stdout.write('  No harness/config.json found. Run: harness-dev init\n\n');
+      process.stdout.write('  No harness/config.json found. Run: dev-harness init\n\n');
       return;
     }
 
@@ -102,7 +102,7 @@ export default async function configCommand(args) {
       process.stdout.write('\n');
     }
 
-    process.stdout.write('Edit with: harness-dev config set <key> <value>\n');
+    process.stdout.write('Edit with: dev-harness config set <key> <value>\n');
     process.stdout.write('Full docs: docs/CONFIGURATION.md\n');
     return;
   }
@@ -141,7 +141,7 @@ export default async function configCommand(args) {
   if (sub === 'set') {
     if (pos.length < 2) {
       die(new CliError(
-        'Usage: harness-dev config set <key> <value>\n' +
+        'Usage: dev-harness config set <key> <value>\n' +
         '  String values: config set mode copilot\n' +
         '  Boolean values: config set gates.enabled true\n' +
         '  Numeric values: config set maxRetries 5',

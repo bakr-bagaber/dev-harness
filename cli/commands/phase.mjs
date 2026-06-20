@@ -5,8 +5,8 @@
  * then triggers the outer loop for autopilot advancement.
  *
  * Usage:
- *   harness-dev phase <name>
- *   harness-dev phase <name> --json
+ *   dev-harness phase <name>
+ *   dev-harness phase <name> --json
  */
 import { CliError, EXIT, die } from '../lib/errors.mjs';
 import { transitionPhase, getPhaseOrder, loadConfig } from '../lib/state.mjs';
@@ -51,7 +51,7 @@ export default async function phaseCommand(args) {
   const { config: preConfig, ok: preOk } = loadConfig(targetDir);
   const preMode = preOk ? (preConfig.mode ?? 'copilot') : 'copilot';
   if (preOk && preConfig.paused && preMode === 'autopilot') {
-    const msg = 'Pipeline is paused. Run: harness-dev resume';
+    const msg = 'Pipeline is paused. Run: dev-harness resume';
     if (json) {
       process.stdout.write(JSON.stringify({
         command: 'phase',
@@ -140,11 +140,11 @@ export default async function phaseCommand(args) {
       if (pipelineResult.status === 'complete') {
         process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
       } else if (pipelineResult.status === 'instruction') {
-        process.stdout.write(`\nNext: harness-dev phase ${pipelineResult.nextPhase}\n`);
+        process.stdout.write(`\nNext: dev-harness phase ${pipelineResult.nextPhase}\n`);
       }
     } else if (nextPhase) {
       // Copilot: print next step
-      process.stdout.write(`Next: harness-dev phase ${nextPhase}\n`);
+      process.stdout.write(`Next: dev-harness phase ${nextPhase}\n`);
       // Auto-prompt: controlled by two independent flags:
       //   autoPrompt=true  → show the prompt
       //   confirmGates=true → require y/n answer before continuing
@@ -158,7 +158,7 @@ export default async function phaseCommand(args) {
               process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
             }
           } else if (answer === false) {
-            process.stdout.write(`  Staying in ${phase.toUpperCase()}. Run: harness-dev phase ${nextPhase} when ready.\n`);
+            process.stdout.write(`  Staying in ${phase.toUpperCase()}. Run: dev-harness phase ${nextPhase} when ready.\n`);
           }
           // null = no TTY, skipped
         } else {

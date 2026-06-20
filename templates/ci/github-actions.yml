@@ -75,4 +75,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install -g dev-harness-cli
-      - run: harness-dev validate --json
+      - run: dev-harness validate --json

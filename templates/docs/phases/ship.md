@@ -17,13 +17,13 @@ The release must be reproducible from a clean checkout.
 
 1. Update `CHANGELOG.md` with version, date, summary.
 2. Bump version in `package.json` / equivalent manifest.
-3. Run full `harness-dev validate` — all gates must pass.
+3. Run full `dev-harness validate` — all gates must pass.
 4. Tag the release: `git tag -a v<x.y.z> -m "Release x.y.z"`.
 5. Open or merge the PR per project workflow.
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -38,6 +38,6 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: pipeline complete. `harness-dev status` reports
+On gate pass: pipeline complete. `dev-harness status` reports
 `Pipeline complete after "ship"`. Increment `pipelineIteration` and loop back
 to DEFINE for the next sprint, or stop if the project is done.

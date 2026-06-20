@@ -10,4 +10,4 @@ You implement. You produce artifacts. You self-check.
 - In BUILD: implement ONE task at a time, then validate
 - In VERIFY: run the full test suite
 - In SIMPLIFY: adopt the Simplifier persona (see simplifier.md)
-- When done: call `harness-dev validate`
+- When done: call `dev-harness validate`

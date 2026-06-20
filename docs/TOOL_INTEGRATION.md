@@ -1,6 +1,6 @@
 # Tool Integration Guide
 
-harness-dev is agent-agnostic by design. It works with any coding agent that
+dev-harness is agent-agnostic by design. It works with any coding agent that
 can read files and run shell commands. This guide covers integration with
 specific tools.
 
@@ -8,13 +8,13 @@ specific tools.
 
 ```bash
 # Scaffold with a specific agent tool
-harness-dev init --stack node --agent-tool claude-code --target my-project
+dev-harness init --stack node --agent-tool claude-code --target my-project
 
 # Or scaffold generically (AGENTS.md only — works with most tools)
-harness-dev init --stack node --target my-project
+dev-harness init --stack node --target my-project
 
 # Detect which tools are configured in an existing project
-harness-dev detect-tool --target my-project
+dev-harness detect-tool --target my-project
 ```
 
 ## How It Works
@@ -23,8 +23,8 @@ The harness emits **generic phase instructions** via stdout. Any agent that
 can read text output and run shell commands can follow them:
 
 1. Agent reads `AGENTS.md` (or tool-specific file like `CLAUDE.md`)
-2. User runs `harness-dev phase <name>` — CLI prints instructions for the agent
-3. Agent does the work, then runs `harness-dev validate`
+2. User runs `dev-harness phase <name>` — CLI prints instructions for the agent
+3. Agent does the work, then runs `dev-harness validate`
 4. Gate passes → next phase; gate fails → agent retries with feedback
 
 No tool-specific protocol is needed — the contract is text in, text out.
@@ -73,28 +73,28 @@ No tool-specific protocol is needed — the contract is text in, text out.
 
 ```bash
 # Claude Code
-harness-dev init --stack node --agent-tool claude-code --target my-project
+dev-harness init --stack node --agent-tool claude-code --target my-project
 
 # Cursor
-harness-dev init --stack node --agent-tool cursor --target my-project
+dev-harness init --stack node --agent-tool cursor --target my-project
 
 # Windsurf
-harness-dev init --stack node --agent-tool windsurf --target my-project
+dev-harness init --stack node --agent-tool windsurf --target my-project
 
 # Gemini CLI
-harness-dev init --stack node --agent-tool gemini --target my-project
+dev-harness init --stack node --agent-tool gemini --target my-project
 
 # GitHub Copilot
-harness-dev init --stack node --agent-tool copilot --target my-project
+dev-harness init --stack node --agent-tool copilot --target my-project
 
 # Cline
-harness-dev init --stack node --agent-tool cline --target my-project
+dev-harness init --stack node --agent-tool cline --target my-project
 
 # Codex (reads AGENTS.md natively)
-harness-dev init --stack node --agent-tool codex --target my-project
+dev-harness init --stack node --agent-tool codex --target my-project
 
 # Generic (default — AGENTS.md only)
-harness-dev init --stack node --target my-project
+dev-harness init --stack node --target my-project
 ```
 
 ## Adapter Architecture
@@ -136,7 +136,7 @@ That's it — `init --agent-tool new-tool` and `detect-tool` will work automatic
 ## detect-tool Command
 
 ```bash
-harness-dev detect-tool --target my-project --json
+dev-harness detect-tool --target my-project --json
 ```
 
 ```json

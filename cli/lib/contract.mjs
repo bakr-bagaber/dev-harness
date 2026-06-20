@@ -168,7 +168,7 @@ ${existingStatus || `## Agreement Status
 export function reviewContract(targetDir, decision, notes) {
   const path = CONTRACT_PATH(targetDir);
   if (!existsSync(path)) {
-    return { ok: false, error: 'No sprint-contract.md found. Run: harness-dev contract propose first', escalated: false };
+    return { ok: false, error: 'No sprint-contract.md found. Run: dev-harness contract propose first', escalated: false };
   }
 
   try {
@@ -276,7 +276,7 @@ export function validateContract(targetDir) {
     return {
       name: 'contract-agreed',
       pass: false,
-      detail: 'Sprint contract not yet proposed. Run: harness-dev contract propose',
+      detail: 'Sprint contract not yet proposed. Run: dev-harness contract propose',
     };
   }
 
@@ -301,6 +301,6 @@ export function validateContract(targetDir) {
   return {
     name: 'contract-agreed',
     pass: false,
-    detail: `Sprint contract ${noun} (round ${rounds}/${MAX_NEGOTIATION_ROUNDS}). Run: harness-dev contract review`,
+    detail: `Sprint contract ${noun} (round ${rounds}/${MAX_NEGOTIATION_ROUNDS}). Run: dev-harness contract review`,
   };
 }

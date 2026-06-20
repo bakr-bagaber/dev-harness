@@ -124,7 +124,7 @@ export function loadConfig(targetDir) {
       config: defaults,
       path: cfgPath,
       ok: false,
-      error: `Not found: ${cfgPath}. Run: harness-dev init`,
+      error: `Not found: ${cfgPath}. Run: dev-harness init`,
     };
   }
 

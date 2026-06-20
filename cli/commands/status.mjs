@@ -4,7 +4,7 @@
  * Reads harness-config.json via state.mjs for live project state,
  * plus runs stack detection and gate checks for current status.
  *
- * Usage: harness-dev status [--json] [--target <dir>]
+ * Usage: dev-harness status [--json] [--target <dir>]
  */
 import { resolve, basename } from 'node:path';
 import { detectStack } from '../lib/detect-stack.mjs';
@@ -61,7 +61,7 @@ export default async function statusCommand(args) {
       status: 'ok',
       message: configOk
         ? `Phase: ${phase || 'not started'}, Stack: ${stack.label}`
-        : 'No harness/config.json found — run harness-dev init',
+        : 'No harness/config.json found — run dev-harness init',
       project: basename(targetDir),
       stack: stack.name,
       stackLabel: stack.label,
@@ -150,19 +150,19 @@ function gateStatusLabel(status, passing, total) {
 
 function determineNextAction(targetDir, configOk, config, phase, gateStatus) {
   if (!configOk) {
-    return 'Run: harness-dev init';
+    return 'Run: dev-harness init';
   }
   if (!phase) {
-    return 'Run: harness-dev phase define to start';
+    return 'Run: dev-harness phase define to start';
   }
   if (gateStatus === 'fail') {
-    return 'Run: harness-dev validate to re-check';
+    return 'Run: dev-harness validate to re-check';
   }
   // Determine next phase
   const order = ['define', 'plan', 'build', 'verify', 'review', 'ship'];
   const idx = order.indexOf(phase);
   if (idx >= 0 && idx < order.length - 1) {
-    return `Run: harness-dev phase ${order[idx + 1]}`;
+    return `Run: dev-harness phase ${order[idx + 1]}`;
   }
-  return `Run: harness-dev validate`;
+  return `Run: dev-harness validate`;
 }

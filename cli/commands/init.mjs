@@ -6,7 +6,7 @@
  * init.sh, progress.md, sprint-contract.md) plus project files (feature_list.json,
  * feature-list.schema.json, session-handoff.md, etc.), git init, .gitignore.
  *
- * Usage: harness-dev init [--stack <name>] [--target <dir>] [--agent-tool <name>] [--force] [--no-git] [--json]
+ * Usage: dev-harness init [--stack <name>] [--target <dir>] [--agent-tool <name>] [--force] [--no-git] [--json]
  */
 import { resolve, join } from 'node:path';
 import {

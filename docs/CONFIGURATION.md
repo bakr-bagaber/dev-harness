@@ -1,25 +1,25 @@
 # Configuration Reference
 
 All harness configuration lives in **`harness-config.json`** in the project root.
-This file is created by `harness-dev init` and can be edited directly or via
+This file is created by `dev-harness init` and can be edited directly or via
 the CLI.
 
 ## Quick Start
 
 ```bash
 # List all parameters with current values and descriptions
-harness-dev config list
+dev-harness config list
 
 # Get a specific value
-harness-dev config get mode
+dev-harness config get mode
 
 # Set a value
-harness-dev config set gates.enabled true
-harness-dev config set mode autopilot
-harness-dev config set maxRetries 5
+dev-harness config set gates.enabled true
+dev-harness config set mode autopilot
+dev-harness config set maxRetries 5
 
 # Get full config as JSON
-harness-dev config get
+dev-harness config get
 ```
 
 ## Parameter Groups
@@ -29,13 +29,13 @@ harness-dev config get
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `mode` | enum | `copilot` | Execution mode: `copilot` (manual phase runs) or `autopilot` (auto-advance after gates pass) |
-| `paused` | boolean | `false` | Autopilot pause state. Set via `harness-dev pause` / `harness-dev resume` |
+| `paused` | boolean | `false` | Autopilot pause state. Set via `dev-harness pause` / `dev-harness resume` |
 | `maxRetries` | integer | `3` | Max retry attempts per phase before escalating to human |
 
 **Examples:**
 ```bash
-harness-dev config set mode autopilot
-harness-dev config set maxRetries 5
+dev-harness config set mode autopilot
+dev-harness config set maxRetries 5
 ```
 
 ### Stack
@@ -68,7 +68,7 @@ harness-dev config set maxRetries 5
 
 **Example:**
 ```bash
-harness-dev config set agentTool claude-code
+dev-harness config set agentTool claude-code
 ```
 
 ### Gates
@@ -82,9 +82,9 @@ harness-dev config set agentTool claude-code
 
 **Examples:**
 ```bash
-harness-dev config set gates.enabled true
-harness-dev config set gates.coverage.enabled true
-harness-dev config set gates.coverage.threshold 90
+dev-harness config set gates.enabled true
+dev-harness config set gates.coverage.enabled true
+dev-harness config set gates.coverage.threshold 90
 ```
 
 ### Git
@@ -97,8 +97,8 @@ harness-dev config set gates.coverage.threshold 90
 
 **Examples:**
 ```bash
-harness-dev config set git.autoCommit true
-harness-dev config set git.resetOnRetry true
+dev-harness config set git.autoCommit true
+dev-harness config set git.resetOnRetry true
 ```
 
 ### Phases
@@ -109,7 +109,7 @@ harness-dev config set git.resetOnRetry true
 
 **Example (enable simplify):**
 ```bash
-harness-dev config set phases.enabled '["define","plan","build","verify","simplify","review","ship"]'
+dev-harness config set phases.enabled '["define","plan","build","verify","simplify","review","ship"]'
 ```
 
 ### Agent Tones
@@ -123,7 +123,7 @@ harness-dev config set phases.enabled '["define","plan","build","verify","simpli
 
 **Example:**
 ```bash
-harness-dev config set agents.tone.evaluator "Strict. Reject anything without tests."
+dev-harness config set agents.tone.evaluator "Strict. Reject anything without tests."
 ```
 
 ### Runtime State (read-only)
@@ -190,7 +190,7 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 
 ## See Also
 
-- `harness-dev config list` — interactive parameter listing
-- `harness-dev config list --json` — machine-readable parameter metadata
+- `dev-harness config list` — interactive parameter listing
+- `dev-harness config list --json` — machine-readable parameter metadata
 - [Tool Integration Guide](TOOL_INTEGRATION.md) — agent tool configuration
 - [Project Plan](../PROJECT_PLAN.md) — full task breakdown

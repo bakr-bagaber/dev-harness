@@ -4,10 +4,10 @@
  * Manages the generator-evaluator agreement loop.
  *
  * Usage:
- *   harness-dev contract propose [--scope "msg"] [--exclusions "msg"]
- *   harness-dev contract review [--agreed|--needs-revision]
- *   harness-dev contract status
- *   harness-dev contract escalate [--reason "msg"]
+ *   dev-harness contract propose [--scope "msg"] [--exclusions "msg"]
+ *   dev-harness contract review [--agreed|--needs-revision]
+ *   dev-harness contract status
+ *   dev-harness contract escalate [--reason "msg"]
  */
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
@@ -22,7 +22,7 @@ export default async function contractCommand(args) {
   const sub = args.subcommand;
 
   if (!sub || !SUBCOMMANDS.includes(sub)) {
-    die(new CliError(`Usage: harness-dev contract ${SUBCOMMANDS.join('|')}`, EXIT.USAGE_ERROR), json);
+    die(new CliError(`Usage: dev-harness contract ${SUBCOMMANDS.join('|')}`, EXIT.USAGE_ERROR), json);
     return;
   }
 
@@ -34,7 +34,7 @@ export default async function contractCommand(args) {
 
     if (!scope) {
       die(new CliError(
-        'Usage: harness-dev contract propose --scope "I will build X" [--exclusions "W"] [--criteria "test1|test2"]',
+        'Usage: dev-harness contract propose --scope "I will build X" [--exclusions "W"] [--criteria "test1|test2"]',
         EXIT.USAGE_ERROR,
       ), json);
       return;
@@ -53,7 +53,7 @@ export default async function contractCommand(args) {
     }
 
     if (result.ok) {
-      process.stdout.write('✓ Contract proposed. Run: harness-dev contract review\n');
+      process.stdout.write('✓ Contract proposed. Run: dev-harness contract review\n');
     } else {
       process.stderr.write(`✗ ${result.error}\n`);
     }
@@ -68,7 +68,7 @@ export default async function contractCommand(args) {
 
     if (!agreed && !needsRevision) {
       die(new CliError(
-        'Usage: harness-dev contract review --agreed [--notes "msg"]  OR  --needs-revision [--notes "msg"]',
+        'Usage: dev-harness contract review --agreed [--notes "msg"]  OR  --needs-revision [--notes "msg"]',
         EXIT.USAGE_ERROR,
       ), json);
       return;
@@ -116,7 +116,7 @@ export default async function contractCommand(args) {
         rounds,
         message: status
           ? `Contract ${status} (round ${rounds}/5)`
-          : 'No sprint-contract.md found. Run: harness-dev contract propose',
+          : 'No sprint-contract.md found. Run: dev-harness contract propose',
       }) + '\n');
       return;
     }
@@ -124,7 +124,7 @@ export default async function contractCommand(args) {
     if (status) {
       process.stdout.write(`Contract status: ${status} (round ${rounds}/5)\n`);
     } else {
-      process.stdout.write('No sprint-contract.md found. Run: harness-dev contract propose\n');
+      process.stdout.write('No sprint-contract.md found. Run: dev-harness contract propose\n');
     }
     return;
   }

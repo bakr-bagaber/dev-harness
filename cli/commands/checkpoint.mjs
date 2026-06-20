@@ -9,7 +9,7 @@
  * save named recovery points (e.g. "before-refactor") that appear
  * in `rollback list` and can be used with `rollback to/branch`.
  *
- * Usage: harness-dev checkpoint create <label>
+ * Usage: dev-harness checkpoint create <label>
  */
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { execGit, getGitRoot, gitTagExists, createGitTag } from '../lib/git.mjs';
@@ -21,7 +21,7 @@ export default async function checkpointCommand(args) {
   const label = args.positionals[0];
 
   if (sub !== 'create' || !label) {
-    die(new CliError('Usage: harness-dev checkpoint create <label> [--force]', EXIT.USAGE_ERROR), json);
+    die(new CliError('Usage: dev-harness checkpoint create <label> [--force]', EXIT.USAGE_ERROR), json);
     return;
   }
 

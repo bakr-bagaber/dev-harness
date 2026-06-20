@@ -259,7 +259,7 @@ export function runPhase(targetDir, phase, options = {}) {
     // Human output
     process.stdout.write(output);
     process.stdout.write(`\n═══════════════════════════════════════\n`);
-    process.stdout.write(`Run: harness-dev validate --feature ${feature.id} --task ${task.id}\n`);
+    process.stdout.write(`Run: dev-harness validate --feature ${feature.id} --task ${task.id}\n`);
     process.stdout.write(`═══════════════════════════════════════\n`);
 
     return {
@@ -298,7 +298,7 @@ export function runPhase(targetDir, phase, options = {}) {
   // Human output
   process.stdout.write(output);
   process.stdout.write(`\n═══════════════════════════════════════\n`);
-  process.stdout.write(`Run: harness-dev validate\n`);
+  process.stdout.write(`Run: dev-harness validate\n`);
   process.stdout.write(`═══════════════════════════════════════\n`);
 
   return {

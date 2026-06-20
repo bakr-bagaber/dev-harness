@@ -3,9 +3,9 @@
 ## Quick Start
 
 ```bash
-harness-dev status        # Where are we?
-harness-dev phase <name>  # Invoke a phase
-harness-dev validate      # Check gate criteria
+dev-harness status        # Where are we?
+dev-harness phase <name>  # Invoke a phase
+dev-harness validate      # Check gate criteria
 ```
 
 ## Project
@@ -50,8 +50,8 @@ All harness-managed files live under `harness/` (except `AGENTS.md` which stays 
 2. Read `harness/progress.md` + this file before each operation
 3. Commit frequently — each iteration is a checkpoint
 4. If unsure → read the role guide in `harness/docs/agents/`
-5. Never skip gates — run `harness-dev validate` after each phase
-6. Fresh context per retry — pass `--git-ops` to `harness-dev phase <name>` to auto-reset the working tree on retry (off by default; agent-agnostic)
+5. Never skip gates — run `dev-harness validate` after each phase
+6. Fresh context per retry — pass `--git-ops` to `dev-harness phase <name>` to auto-reset the working tree on retry (off by default; agent-agnostic)
 7. **No files in project root** unless they are harness-managed files (listed in Key Files above) or standard project files (README.md, LICENSE, CHANGELOG.md, CONTRIBUTING.md, .gitignore, and the stack config file like package.json/pyproject.toml/Cargo.toml). All source code, tests, scripts, and docs go in subdirectories.
 8. **Structure from the start** — create folders for your work on day one and stick to them. Suggested layout: `src/` (source), `tests/` (tests), `docs/` (documentation), `scripts/` (automation). Do not dump files at root "temporarily" — there is no temporary.
 9. **No orphaned files** — every file you create must have a clear purpose and be referenced by imports, configs, docs, or the build system. If you create a file, wire it in immediately. Delete files you stop using.

@@ -98,7 +98,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
 
   if (mode === 'copilot') {
     // Copilot: print instructions for next phase
-    const msg = `${completedPhase.toUpperCase()} complete. Next: harness-dev phase ${nextPhase}`;
+    const msg = `${completedPhase.toUpperCase()} complete. Next: dev-harness phase ${nextPhase}`;
     if (json) {
       return {
         ok: true,
@@ -128,7 +128,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
 
   // Re-check pause before auto-advancing (user may have paused during phase execution)
   if (config.paused) {
-    const msg = `Autopilot paused after "${completedPhase}". Run: harness-dev resume`;
+    const msg = `Autopilot paused after "${completedPhase}". Run: dev-harness resume`;
     if (verbose && !json) {
       process.stdout.write(`\n  ⏸ ${msg}\n`);
     }
@@ -205,7 +205,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
  * Run the full autopilot pipeline from current state through SHIP.
  *
  * This is a convenience wrapper — normally autopilot is triggered
- * by calling `harness-dev phase <name>` while in autopilot mode.
+ * by calling `dev-harness phase <name>` while in autopilot mode.
  *
  * @param {string} targetDir
  * @param {object} [options]

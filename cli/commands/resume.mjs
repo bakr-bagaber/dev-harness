@@ -3,7 +3,7 @@
  *
  * Sets config.paused = false. Allows autopilot to continue.
  *
- * Usage: harness-dev resume [--json]
+ * Usage: dev-harness resume [--json]
  */
 import { set } from '../lib/state.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';
@@ -19,14 +19,14 @@ export default async function resumeCommand(args) {
       command: 'resume',
       status: result.ok ? 'ok' : 'error',
       message: result.ok
-        ? 'Pipeline resumed. Run: harness-dev phase <name> to continue.'
+        ? 'Pipeline resumed. Run: dev-harness phase <name> to continue.'
         : (result.error || 'Failed to resume'),
     });
     return;
   }
 
   if (result.ok) {
-    emitHuman('✓ Pipeline resumed. Run: harness-dev phase <name> to continue.\n');
+    emitHuman('✓ Pipeline resumed. Run: dev-harness phase <name> to continue.\n');
   } else {
     emitHumanError(`✗ ${result.error}\n`);
   }

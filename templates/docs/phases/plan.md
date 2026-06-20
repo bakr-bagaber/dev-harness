@@ -20,11 +20,11 @@ verifiable acceptance criteria. The Sprint Contract is negotiated here.
 2. Decompose into features → tasks in `feature_list.json`.
 3. Planner proposes `sprint-contract.md` (scope, criteria, exclusions).
 4. Evaluator reviews; iterate until `**Status:** Agreed`.
-5. Use `harness-dev contract propose` / `contract review --decision <agreed|needs-revision>`.
+5. Use `dev-harness contract propose` / `contract review --decision <agreed|needs-revision>`.
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -33,4 +33,4 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: `harness-dev phase build` (Planner → Generator).
+On gate pass: `dev-harness phase build` (Planner → Generator).

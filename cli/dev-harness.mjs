@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * harness-dev — Agent-agnostic development harness CLI.
+ * dev-harness — Agent-agnostic development harness CLI.
  *
  * Entry point. Parses args, routes to command handler,
  * formats output (human or JSON), handles errors.
@@ -68,7 +68,7 @@ async function main() {
   const loader = COMMANDS[args.command];
   if (!loader) {
     throw new CliError(
-      `Unknown command "${args.command}". See harness-dev --help`,
+      `Unknown command "${args.command}". See dev-harness --help`,
       EXIT.USAGE_ERROR
     );
   }

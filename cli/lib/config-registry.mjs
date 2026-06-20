@@ -3,7 +3,7 @@
  *
  * Single source of truth for parameter descriptions, types, allowed values,
  * and defaults. Used by:
- *   - `harness-dev config list` — interactive parameter listing
+ *   - `dev-harness config list` — interactive parameter listing
  *   - docs/CONFIGURATION.md — generated documentation
  *   - config command — validation of set values
  *
@@ -198,7 +198,7 @@ export const CONFIG_PARAMS = [
     group: 'Runtime State',
     label: 'Current Phase',
     type: 'string',
-    description: 'Current pipeline phase. Managed by harness-dev phase — do not edit.',
+    description: 'Current pipeline phase. Managed by dev-harness phase — do not edit.',
     default: null,
     editable: false,
   },

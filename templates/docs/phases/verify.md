@@ -26,7 +26,7 @@ feature's acceptance criteria from the sprint contract and scores it against
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -35,4 +35,4 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: `harness-dev phase simplify` (Evaluator → Simplifier).
+On gate pass: `dev-harness phase simplify` (Evaluator → Simplifier).

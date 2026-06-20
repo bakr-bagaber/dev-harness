@@ -2,7 +2,7 @@
  * Help text builder — centralized to keep all formatting in one place.
  */
 
-const USAGE = `Usage: harness-dev <command> [options]
+const USAGE = `Usage: dev-harness <command> [options]
 
 Pipeline commands:
   init                  Scaffold full harness in current directory
@@ -53,14 +53,14 @@ Exit codes:
   2  Usage error (bad arguments)
   3  Internal error`;
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 // Help text for JSON output
 function buildJsonHelp() {
   return {
     help: true,
     version: VERSION,
-    usage: 'harness-dev <command> [options]',
+    usage: 'dev-harness <command> [options]',
     commands: {
       init: 'Scaffold full harness in current directory',
       status: 'Show current phase + gate state + detected stack',
@@ -111,12 +111,12 @@ export function versionText(json = false) {
   if (json) {
     return JSON.stringify({ version: VERSION });
   }
-  return `harness-dev v${VERSION}`;
+  return `dev-harness v${VERSION}`;
 }
 
-// Per-command help text (for `harness-dev <command> --help`).
+// Per-command help text (for `dev-harness <command> --help`).
 const COMMAND_HELP = {
-  init: `Usage: harness-dev init [--stack <name>] [--target <dir>] [--force] [--no-git] [--json]
+  init: `Usage: dev-harness init [--stack <name>] [--target <dir>] [--force] [--no-git] [--json]
 
 Scaffold a full harness in the target directory:
   - Detects stack (or use --stack)
@@ -131,7 +131,7 @@ Flags:
   --no-git          Skip git init
   --json            JSON output`,
 
-  status: `Usage: harness-dev status [--target <dir>] [--json]
+  status: `Usage: dev-harness status [--target <dir>] [--json]
 
 Show current phase, gate state, detected stack, recent lessons, and next action.
 
@@ -139,7 +139,7 @@ Flags:
   --target <dir>    Project directory (default: cwd)
   --json            JSON output`,
 
-  phase: `Usage: harness-dev phase <name> [--target <dir>] [--git-ops] [--json]
+  phase: `Usage: dev-harness phase <name> [--target <dir>] [--git-ops] [--json]
 
 Invoke a phase. Valid phases: define, plan, build, verify, simplify, review, ship.
 
@@ -148,7 +148,7 @@ Flags:
   --git-ops         Execute git reset --hard + clean on retry (fresh context)
   --json            JSON output`,
 
-  validate: `Usage: harness-dev validate [--phase <name>] [--feature <id> --task <id>] [--target <dir>] [--json]
+  validate: `Usage: dev-harness validate [--phase <name>] [--feature <id> --task <id>] [--target <dir>] [--json]
 
 Run gate checks for the current (or specified) phase.
 
@@ -159,39 +159,39 @@ Flags:
   --target <dir>    Project directory (default: cwd)
   --json            JSON output`,
 
-  'set-mode': `Usage: harness-dev set-mode <copilot|autopilot> [--target <dir>] [--json]
+  'set-mode': `Usage: dev-harness set-mode <copilot|autopilot> [--target <dir>] [--json]
 
 Switch execution mode. Autopilot requires DEFINE phase or later.`,
 
-  config: `Usage: harness-dev config list [--target <dir>] [--json]
-       harness-dev config get [key] [--target <dir>] [--json]
-       harness-dev config set <key> <value> [--target <dir>] [--json]
+  config: `Usage: dev-harness config list [--target <dir>] [--json]
+       dev-harness config get [key] [--target <dir>] [--json]
+       dev-harness config set <key> <value> [--target <dir>] [--json]
 
 List all parameters with descriptions, or get/set values via dot-notation.
 Use 'config list' to see all configurable parameters, their current values,
 types, allowed options, and descriptions.
 
 Examples:
-  harness-dev config list
-  harness-dev config list --json
-  harness-dev config get gates.enabled
-  harness-dev config set gates.enabled true
-  harness-dev config set mode autopilot
-  harness-dev config set maxRetries 5`,
+  dev-harness config list
+  dev-harness config list --json
+  dev-harness config get gates.enabled
+  dev-harness config set gates.enabled true
+  dev-harness config set mode autopilot
+  dev-harness config set maxRetries 5`,
 
-  pause: `Usage: harness-dev pause [--target <dir>] [--json]
+  pause: `Usage: dev-harness pause [--target <dir>] [--json]
 
 Pause autopilot execution. Autopilot stops after the current phase gate.`,
 
-  resume: `Usage: harness-dev resume [--target <dir>] [--json]
+  resume: `Usage: dev-harness resume [--target <dir>] [--json]
 
 Resume autopilot execution.`,
 
-  learn: `Usage: harness-dev learn "<message>" [--target <dir>] [--json]
+  learn: `Usage: dev-harness learn "<message>" [--target <dir>] [--json]
 
 Append a lesson to the Lessons section of progress.md.`,
 
-  contract: `Usage: harness-dev contract <subcommand> [options] [--target <dir>] [--json]
+  contract: `Usage: dev-harness contract <subcommand> [options] [--target <dir>] [--json]
 
 Subcommands:
   propose --scope "..." [--exclusions "..."] [--criteria "..."]   Generator proposes
@@ -199,7 +199,7 @@ Subcommands:
   status                                                            Show contract state
   escalate [--reason "..."]                                         Human adjudication`,
 
-  worktree: `Usage: harness-dev worktree <subcommand> [options] [--target <dir>] [--json]
+  worktree: `Usage: dev-harness worktree <subcommand> [options] [--target <dir>] [--json]
 
 Subcommands:
   create <name>   Create isolated worktree for a feature
@@ -207,25 +207,25 @@ Subcommands:
   prune           Remove orphaned worktrees
   remove <name>   Clean up worktree (optionally merge branch)`,
 
-  rollback: `Usage: harness-dev rollback <subcommand> [checkpoint] [--target <dir>] [--json]
+  rollback: `Usage: dev-harness rollback <subcommand> [checkpoint] [--target <dir>] [--json]
 
 Subcommands:
   list            Show available checkpoints
   to <tag>        Restore state to a checkpoint
   branch <tag>    Branch off a good iteration`,
 
-  checkpoint: `Usage: harness-dev checkpoint create <label> [--force] [--target <dir>] [--json]
+  checkpoint: `Usage: dev-harness checkpoint create <label> [--force] [--target <dir>] [--json]
 
 Create a manual checkpoint tag (manual/<label>). Requires clean working tree
 unless --force is given.`,
 
-  'detect-tool': `Usage: harness-dev detect-tool [--target <dir>] [--json]
+  'detect-tool': `Usage: dev-harness detect-tool [--target <dir>] [--json]
 
 Scan the project for agent-tool files (CLAUDE.md, .cursorrules, AGENTS.md, etc.)
 and report which coding agents are available. Recommends a tool based on config
 and detected files.`,
 
-  help: `Usage: harness-dev help
+  help: `Usage: dev-harness help
 
 Show the global help message. Alias for --help.`,
 };

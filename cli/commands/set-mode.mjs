@@ -1,10 +1,10 @@
 /**
  * set-mode — Switch between copilot and autopilot.
  *
- * Usage: harness-dev set-mode <mode>
- *   harness-dev set-mode autopilot
- *   harness-dev set-mode copilot
- *   harness-dev set-mode autopilot --json
+ * Usage: dev-harness set-mode <mode>
+ *   dev-harness set-mode autopilot
+ *   dev-harness set-mode copilot
+ *   dev-harness set-mode autopilot --json
  */
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { set, loadConfig, getPhaseOrder } from '../lib/state.mjs';
@@ -19,7 +19,7 @@ export default async function setModeCommand(args) {
   if (!mode || !valid.includes(mode)) {
     die(
       new CliError(
-        `Mode required. Valid: ${valid.join(', ')}.\n  Example: harness-dev set-mode autopilot`,
+        `Mode required. Valid: ${valid.join(', ')}.\n  Example: dev-harness set-mode autopilot`,
         EXIT.USAGE_ERROR,
       ),
       json,

@@ -1,10 +1,10 @@
 {
   "name": "dev-harness-cli",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Agent-agnostic software development harness CLI — scaffold, phase orchestration, gate validation for any coding agent",
   "type": "module",
   "bin": {
-    "harness-dev": "cli/harness-dev.mjs"
+    "dev-harness": "cli/dev-harness.mjs"
   },
   "files": [
     "cli/",
@@ -39,10 +39,10 @@
   "scripts": {
     "lint": "eslint cli/",
     "lint:fix": "eslint cli/ --fix",
-    "check": "node --check cli/harness-dev.mjs && echo 'Syntax OK'",
+    "check": "node --check cli/dev-harness.mjs && echo 'Syntax OK'",
     "test": "node test/run-all.mjs",
     "test:verbose": "node test/run-all.mjs --verbose",
-    "postinstall": "node -e \"try{process.stdout.write('harness-dev installed. Run: npx harness-dev --help\\n')}catch(e){}\""
+    "postinstall": "node -e \"try{process.stdout.write('dev-harness installed. Run: npx dev-harness --help\\n')}catch(e){}\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -12,7 +12,7 @@
  * Also reads harness-config.json agentTool field if present.
  *
  * Usage:
- *   harness-dev detect-tool [--target <dir>] [--json]
+ *   dev-harness detect-tool [--target <dir>] [--json]
  */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -80,7 +80,7 @@ export default async function detectToolCommand(args) {
     status: 'ok',
     message: detected.length > 0
       ? `Detected ${detected.length} agent tool(s): ${detected.join(', ')}`
-      : 'No agent tools detected. Run: harness-dev init',
+      : 'No agent tools detected. Run: dev-harness init',
     available: detected,
     configured: configuredTool,
     recommended,
@@ -104,7 +104,7 @@ export default async function detectToolCommand(args) {
     }
   } else {
     emitHuman(`  No agent tools detected.\n`);
-    emitHuman(`  Run: harness-dev init to scaffold a project.\n`);
+    emitHuman(`  Run: dev-harness init to scaffold a project.\n`);
   }
   if (hasAgentsMd) {
     emitHuman(`\n  AGENTS.md present — tools that read it natively are available.\n`);

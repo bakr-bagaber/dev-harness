@@ -2,8 +2,8 @@
  * learn — Append a lesson to progress.md.
  *
  * Usage:
- *   harness-dev learn "Lesson text here"
- *   harness-dev learn "Lesson text" --json
+ *   dev-harness learn "Lesson text here"
+ *   dev-harness learn "Lesson text" --json
  */
 import { CliError, EXIT, die } from '../lib/errors.mjs';
 import { appendLesson } from '../lib/progress.mjs';
@@ -17,7 +17,7 @@ export default async function learnCommand(args) {
   if (!message) {
     die(
       new CliError(
-        'Lesson message required.\n  Example: harness-dev learn "Token refresh gotcha — accepts access_token in body"',
+        'Lesson message required.\n  Example: dev-harness learn "Token refresh gotcha — accepts access_token in body"',
         EXIT.USAGE_ERROR,
       ),
       json,

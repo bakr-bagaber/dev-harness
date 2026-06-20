@@ -12,7 +12,7 @@ feature list.
 
 ## Entry
 
-- `harness-config.json` exists (created by `harness-dev init`)
+- `harness-config.json` exists (created by `dev-harness init`)
 - `AGENTS.md` present in project root
 
 ## Work
@@ -40,7 +40,7 @@ feature list.
 
 ## Exit Gate
 
-Run `harness-dev validate` — checks:
+Run `dev-harness validate` — checks:
 
 - `config-exists`
 - `git-repo`
@@ -48,4 +48,4 @@ Run `harness-dev validate` — checks:
 
 ## Handoff
 
-On gate pass: `harness-dev phase plan` (Planner → continues as Planner for decomposition).
+On gate pass: `dev-harness phase plan` (Planner → continues as Planner for decomposition).

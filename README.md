@@ -35,7 +35,7 @@ npx dev-harness-cli init --stack python --target my-project
 
 # Global install
 npm install -g dev-harness-cli
-harness-dev --help
+dev-harness --help
 ```
 
 Requires **Node.js >= 18**. Zero runtime dependencies.
@@ -44,29 +44,29 @@ Requires **Node.js >= 18**. Zero runtime dependencies.
 
 ```bash
 # 1. Scaffold a new project
-harness-dev init --stack node --target my-app
+dev-harness init --stack node --target my-app
 cd my-app
 
 # 2. Check status
-harness-dev status
+dev-harness status
 
 # 3. Run the DEFINE phase (agent writes specs)
-harness-dev phase define
+dev-harness phase define
 
 # 4. Validate (run gate checks)
-harness-dev validate
+dev-harness validate
 
 # 5. Continue through pipeline
-harness-dev phase plan
-harness-dev phase build
-harness-dev phase verify
-harness-dev phase review
-harness-dev phase ship
+dev-harness phase plan
+dev-harness phase build
+dev-harness phase verify
+dev-harness phase review
+dev-harness phase ship
 ```
 
 ## Project Structure
 
-When you run `harness-dev init`, all harness-managed files go into a `harness/` subfolder — keeping your project root clean:
+When you run `dev-harness init`, all harness-managed files go into a `harness/` subfolder — keeping your project root clean:
 
 ```
 my-project/
@@ -157,13 +157,13 @@ Harness works with any coding agent. Use `--agent-tool` during init to generate 
 
 ```bash
 # Claude Code → generates CLAUDE.md
-harness-dev init --stack node --agent-tool claude-code --target my-app
+dev-harness init --stack node --agent-tool claude-code --target my-app
 
 # Cursor → generates .cursorrules
-harness-dev init --stack node --agent-tool cursor --target my-app
+dev-harness init --stack node --agent-tool cursor --target my-app
 
 # GitHub Copilot → generates .github/copilot-instructions.md
-harness-dev init --stack node --agent-tool copilot --target my-app
+dev-harness init --stack node --agent-tool copilot --target my-app
 ```
 
 **18 supported tools:** claude-code, cursor, windsurf, gemini, copilot, cline, roo, kilo-code, amazon-q, codex, opencode, continue, aider, antigravity, openclaw, pi, hermes, generic.
@@ -175,7 +175,7 @@ See [docs/TOOL_INTEGRATION.md](docs/TOOL_INTEGRATION.md) for per-tool setup guid
 Gates are deterministic checks that must pass before advancing to the next phase. Enable with:
 
 ```bash
-harness-dev config set gates.enabled true
+dev-harness config set gates.enabled true
 ```
 
 | Phase | Gates |
@@ -193,7 +193,7 @@ harness-dev config set gates.enabled true
 All configuration lives in `harness/config.json`. View with:
 
 ```bash
-harness-dev config list
+dev-harness config list
 ```
 
 29 parameters across 8 groups: Execution, Stack, Agent Tool, Gates, Git, Phases, Agent Tones, Runtime State.
@@ -205,9 +205,9 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for full reference.
 All commands support `--json` for machine-parseable output:
 
 ```bash
-harness-dev status --json
-harness-dev phase define --json
-harness-dev validate --json
+dev-harness status --json
+dev-harness phase define --json
+dev-harness validate --json
 ```
 
 ```json
