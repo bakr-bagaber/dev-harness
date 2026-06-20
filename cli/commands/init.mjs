@@ -190,8 +190,8 @@ export default async function initCommand(args) {
   // Ensure target directory exists
   mkdirSync(targetDir, { recursive: true });
 
-  // Ensure docs/ directory exists
-  mkdirSync(join(targetDir, 'docs'), { recursive: true });
+  // Ensure harness/ directory exists (all harness files go here)
+  mkdirSync(join(targetDir, 'harness'), { recursive: true });
 
   const created = [];
   const errors = [];

@@ -49,9 +49,10 @@ function checkConfigExists(targetDir) {
 }
 
 function checkInitExecutable(targetDir) {
+  // init.sh is now at harness/scripts/init.sh
+  const initSh = resolve(HARNESS_DIR(targetDir), 'scripts', 'init.sh');
   // Windows has no POSIX executable bit — skip the exec-bit check there.
   if (process.platform === 'win32') {
-    const initSh = resolve(targetDir, 'init.sh');
     return {
       name: 'init-executable',
       pass: existsSync(initSh),
@@ -59,7 +60,7 @@ function checkInitExecutable(targetDir) {
     };
   }
   try {
-    const { exitCode } = execCheck('test -x init.sh', targetDir);
+    const { exitCode } = execCheck(`test -x "${initSh}"`, targetDir);
     return {
       name: 'init-executable',
       pass: exitCode === 0,

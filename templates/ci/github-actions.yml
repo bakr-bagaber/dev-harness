@@ -74,5 +74,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm install -g @dev-harness/cli
+      - run: npm install -g dev-harness-cli
       - run: harness-dev validate --json

@@ -18,7 +18,7 @@ harness-dev validate      # Check gate criteria
 
 INIT → DEFINE → PLAN → BUILD → VERIFY → [SIMPLIFY] → REVIEW → SHIP
 
-See `docs/phases/` for phase-specific instructions.
+See `harness/docs/phases/` for phase-specific instructions.
 
 ## Agent Roles
 
@@ -31,21 +31,25 @@ See `docs/phases/` for phase-specific instructions.
 
 ## Key Files
 
+All harness-managed files live under `harness/` (except `AGENTS.md` which stays in root for agent tool compatibility).
+
 | File | Purpose |
 |------|---------|
-| `harness-config.json` | Config + state |
-| `feature_list.json` | Feature list with passes |
-| `progress.md` | Session state + lessons |
-| `sprint-contract.md` | Pre-build agreement |
-| `init.sh` | Install → verify → start |
-| `evaluator-rubric.md` | Quality scorecard (6 dimensions, 0-2) |
-|
+| `AGENTS.md` | This file — agent instructions (root) |
+| `harness/config.json` | Config + state |
+| `harness/features/feature-list.json` | Feature list with passes |
+| `harness/progress.md` | Session state + lessons |
+| `harness/sprint-contract.md` | Pre-build agreement |
+| `harness/scripts/init.sh` | Install → verify → start |
+| `harness/evaluator-rubric.md` | Quality scorecard (6 dimensions, 0-2) |
+| `harness/docs/` | Architecture, constraints, decisions, agent guides, phase guides |
+
 ## Rules (non-negotiable)
 
 1. No agent evaluates its own work — Evaluator always judges
-2. Read `progress.md` + this file before each operation
+2. Read `harness/progress.md` + this file before each operation
 3. Commit frequently — each iteration is a checkpoint
-4. If unsure → read the role guide in `docs/agents/`
+4. If unsure → read the role guide in `harness/docs/agents/`
 5. Never skip gates — run `harness-dev validate` after each phase
 6. Fresh context per retry — pass `--git-ops` to `harness-dev phase <name>` to auto-reset the working tree on retry (off by default; agent-agnostic)
 7. **No files in project root** unless they are harness-managed files (listed in Key Files above) or standard project files (README.md, LICENSE, CHANGELOG.md, CONTRIBUTING.md, .gitignore, and the stack config file like package.json/pyproject.toml/Cargo.toml). All source code, tests, scripts, and docs go in subdirectories.

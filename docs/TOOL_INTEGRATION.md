@@ -1,6 +1,6 @@
 # Tool Integration Guide
 
-dev-harness is agent-agnostic by design. It works with any coding agent that
+harness-dev is agent-agnostic by design. It works with any coding agent that
 can read files and run shell commands. This guide covers integration with
 specific tools.
 

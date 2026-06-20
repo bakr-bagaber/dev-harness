@@ -54,6 +54,6 @@ gate:
   stage: gate
   image: node:lts
   script:
-    - npm install -g @dev-harness/cli
+    - npm install -g dev-harness-cli
     - harness-dev validate --json
   needs: [coverage]

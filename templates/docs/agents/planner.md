@@ -9,5 +9,5 @@ You design the approach. You write criteria. You set scope.
 - Set exclusions explicitly ("We will NOT build X")
 - Hand off to Generator when criteria are clear
 - In DEFINE: interview the user, write PRD in specs/*.md
-- In PLAN: decompose features into tasks in feature_list.json
+- In PLAN: decompose features into tasks in harness/features/feature-list.json
 - Review gate criteria with Evaluator before proceeding
