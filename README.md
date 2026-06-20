@@ -3,24 +3,24 @@
 **Agent-agnostic development pipeline CLI.** Scaffold, phase orchestrate, gate validate, and iterate any software project — works with any coding agent (Claude Code, Codex, OpenCode, Cursor, etc.).
 
 ```bash
-npx @dev-harness/cli init --stack python --target my-project
+npx dev-harness-cli init --stack python --target my-project
 cd my-project
-npx harness-dev phase define
+npx dev-harness-cli phase define
 ```
 
 ## Install
 
 ```bash
 # Quick start (no install)
-npx @dev-harness/cli --help
+npx github:bakr-bagaber/dev-harness --help
 
-# Global install
-npm install -g @dev-harness/cli
+# Global install from GitHub
+npm install -g https://github.com/bakr-bagaber/dev-harness.git
 harness-dev --help
 
-# Local in project
-npm install --save-dev @dev-harness/cli
-npx harness-dev --help
+# Or clone and install
+git clone https://github.com/bakr-bagaber/dev-harness.git
+cd dev-harness && npm install -g .
 ```
 
 Requires **Node.js >= 18**.

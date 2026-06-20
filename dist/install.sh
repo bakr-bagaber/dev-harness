@@ -22,6 +22,8 @@ set -euo pipefail
 INSTALL_DIR="/usr/local/bin"
 VERSION="latest"
 REPO="bakr-bagaber/dev-harness"
+GIT_URL="https://github.com/${REPO}.git"
+NPX_PKG="github:${REPO}"
 CLI_NAME="harness-dev"
 SOURCE_URL="https://raw.githubusercontent.com/${REPO}/main"
 
@@ -47,7 +49,7 @@ done
 if ! command -v node &>/dev/null; then
   echo "Error: Node.js is required but not found."
   echo "  Install: https://nodejs.org/en/download/"
-  echo "  Or use:  npx @dev-harness/cli --help"
+  echo "  Or use:  npx github:${REPO} --help"
   exit 1
 fi
 
@@ -60,50 +62,62 @@ fi
 # ── Determine install method ──────────────────────────────────────────────────
 echo "==> Installing ${CLI_NAME} (${VERSION}) to ${INSTALL_DIR}"
 
-# Option A: npm global (preferred)
+# Option A: install via npm directly from GitHub (no npm publish needed)
 if command -v npm &>/dev/null; then
-  echo "==> Installing via npm..."
-  if [[ "$VERSION" == "latest" ]]; then
-    npm install -g "${REPO}" 2>/dev/null || true
-  else
-    npm install -g "${REPO}@${VERSION}" 2>/dev/null || true
-  fi
+  echo "==> Installing via npm from GitHub..."
+  npm install -g "${GIT_URL}" 2>/dev/null || true
 
   if command -v "${CLI_NAME}" &>/dev/null; then
-    echo "==> ${CLI_NAME} installed successfully via npm!"
+    echo "==> ${CLI_NAME} installed successfully via npm from GitHub!"
     "${CLI_NAME}" --help
     exit 0
   fi
 fi
 
-# Option B: npx (no install — always works)
-echo "==> npm global install skipped. Use npx instead:"
-echo ""
-echo "    npx @dev-harness/cli init --stack node --target my-project"
-echo ""
+# Option B: direct download from GitHub raw (curl/wget)
+echo "==> Attempting direct download from GitHub..."
 
-# Option C: direct download from GitHub
-if [[ -d "${INSTALL_DIR}" ]]; then
-  echo "==> Attempting direct download from GitHub..."
-  DOWNLOAD_URL="${SOURCE_URL}/cli/harness-dev.mjs"
+# Try system bin first, fall back to ~/.local/bin
+DOWNLOAD_URL="${SOURCE_URL}/cli/harness-dev.mjs"
+if [[ -d "${INSTALL_DIR}" && -w "${INSTALL_DIR}" ]]; then
   TARGET="${INSTALL_DIR}/${CLI_NAME}"
+elif [[ -d "$HOME/.local/bin" && -w "$HOME/.local/bin" ]]; then
+  INSTALL_DIR="$HOME/.local/bin"
+  TARGET="${INSTALL_DIR}/${CLI_NAME}"
+elif [[ -w "$HOME" ]]; then
+  INSTALL_DIR="$HOME/.local/bin"
+  mkdir -p "${INSTALL_DIR}"
+  TARGET="${INSTALL_DIR}/${CLI_NAME}"
+else
+  TARGET=""
+fi
 
-  if command -v curl &>/dev/null; then
-    curl -fsSL "${DOWNLOAD_URL}" -o "${TARGET}" 2>/dev/null && chmod +x "${TARGET}" && \
-      echo "==> Installed to ${TARGET}" && exit 0
-  elif command -v wget &>/dev/null; then
-    wget -q "${DOWNLOAD_URL}" -O "${TARGET}" 2>/dev/null && chmod +x "${TARGET}" && \
-      echo "==> Installed to ${TARGET}" && exit 0
+if [[ -n "$TARGET" ]] && command -v curl &>/dev/null; then
+  if curl -fsSL "${DOWNLOAD_URL}" -o "${TARGET}" 2>/dev/null && chmod +x "${TARGET}"; then
+    echo "==> Installed to ${TARGET}"
+    echo "==> Make sure ${INSTALL_DIR} is in your PATH."
+    echo ""
+    "${TARGET}" --help
+    exit 0
+  fi
+elif [[ -n "$TARGET" ]] && command -v wget &>/dev/null; then
+  if wget -q "${DOWNLOAD_URL}" -O "${TARGET}" 2>/dev/null && chmod +x "${TARGET}"; then
+    echo "==> Installed to ${TARGET}"
+    echo "==> Make sure ${INSTALL_DIR} is in your PATH."
+    echo ""
+    "${TARGET}" --help
+    exit 0
   fi
 fi
 
 # ── Fallback: instructions ────────────────────────────────────────────────────
 echo ""
-echo "==> ${CLI_NAME} is ready to use. Run it with:"
+echo "==> All install methods failed. Use directly from GitHub:"
 echo ""
-echo "    npx @dev-harness/cli init --help"
+echo "    npx github:${REPO} init --help"
 echo ""
-echo "Or install globally:"
+echo "Or clone and install:"
 echo ""
-echo "    npm install -g @dev-harness/cli"
+echo "    git clone ${GIT_URL}"
+echo "    cd dev-harness && npm install -g ."
 echo ""
