@@ -1,0 +1,494 @@
+{
+  "python": {
+    "label": "Python",
+    "testCmd": "python3 -m pytest",
+    "lintCmd": "python3 -m ruff check",
+    "typeCheckCmd": "python3 -m mypy",
+    "buildCmd": "python3 -m build",
+    "installCmd": "python3 -m pip install -e .",
+    "versionFile": ".python-version",
+    "configFile": "pyproject.toml",
+    "extensions": [
+      ".py"
+    ],
+    "detectFiles": [
+      "pyproject.toml",
+      "setup.py",
+      "requirements.txt",
+      "Pipfile"
+    ],
+    "coverageCmd": "python3 -m pytest --cov --cov-report=term-missing --cov-fail-under=80"
+  },
+  "node": {
+    "label": "Node.js",
+    "testCmd": "npm test",
+    "lintCmd": "npx eslint .",
+    "typeCheckCmd": "npx tsc --noEmit",
+    "buildCmd": "npm run build",
+    "installCmd": "npm install",
+    "versionFile": ".nvmrc",
+    "configFile": "package.json",
+    "extensions": [
+      ".js",
+      ".jsx",
+      ".ts",
+      ".tsx",
+      ".mjs"
+    ],
+    "detectFiles": [
+      "package.json",
+      "tsconfig.json",
+      "yarn.lock",
+      "pnpm-lock.yaml"
+    ],
+    "coverageCmd": "npx c8 --reporter=text --reporter=lcov npm test"
+  },
+  "go": {
+    "label": "Go",
+    "testCmd": "go test ./...",
+    "lintCmd": "go vet ./...",
+    "typeCheckCmd": "go build ./...",
+    "buildCmd": "go build ./...",
+    "installCmd": "go mod download",
+    "versionFile": "go.ver",
+    "configFile": "go.mod",
+    "extensions": [
+      ".go"
+    ],
+    "detectFiles": [
+      "go.mod"
+    ],
+    "coverageCmd": "go test -coverprofile=cover.out ./... && go tool cover -func=cover.out"
+  },
+  "rust": {
+    "label": "Rust",
+    "testCmd": "cargo test",
+    "lintCmd": "cargo clippy -- -D warnings",
+    "typeCheckCmd": "cargo check",
+    "buildCmd": "cargo build",
+    "installCmd": "cargo build",
+    "versionFile": "rust-toolchain.toml",
+    "configFile": "Cargo.toml",
+    "extensions": [
+      ".rs"
+    ],
+    "detectFiles": [
+      "Cargo.toml"
+    ],
+    "coverageCmd": "cargo tarpaulin --out xml --target-dir target/tarpaulin 2>/dev/null || cargo test"
+  },
+  "c": {
+    "label": "C",
+    "testCmd": "ctest --output-on-failure",
+    "lintCmd": "gcc -Wall -Wextra -pedantic -std=c17 -fsyntax-only $(find . -name '*.c')",
+    "typeCheckCmd": "",
+    "buildCmd": "mkdir -p build && cd build && cmake .. && make",
+    "installCmd": "apt-get install -y build-essential cmake 2>/dev/null || brew install cmake 2>/dev/null",
+    "versionFile": "",
+    "configFile": "CMakeLists.txt",
+    "extensions": [
+      ".c"
+    ],
+    "detectFiles": [
+      "CMakeLists.txt",
+      "Makefile"
+    ],
+    "pairExts": [
+      ".c"
+    ],
+    "coverageCmd": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make && ctest -T coverage 2>/dev/null || ctest"
+  },
+  "cpp": {
+    "label": "C++",
+    "testCmd": "ctest --output-on-failure",
+    "lintCmd": "clang++ -Wall -Wextra -std=c++20 -fsyntax-only $(find . -name '*.cpp' -o -name '*.hpp')",
+    "typeCheckCmd": "",
+    "buildCmd": "mkdir -p build && cd build && cmake .. && make",
+    "installCmd": "apt-get install -y build-essential cmake 2>/dev/null || brew install cmake 2>/dev/null",
+    "versionFile": "",
+    "configFile": "CMakeLists.txt",
+    "extensions": [
+      ".cpp",
+      ".hpp",
+      ".cc",
+      ".cxx"
+    ],
+    "detectFiles": [
+      "CMakeLists.txt",
+      "Makefile"
+    ],
+    "pairExts": [
+      ".cpp",
+      ".hpp",
+      ".cc"
+    ],
+    "coverageCmd": "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make && ctest -T coverage 2>/dev/null || ctest"
+  },
+  "vhdl": {
+    "label": "VHDL",
+    "testCmd": "ghdl -a --std=08 $(find . -name '*.vhdl' -o -name '*.vhd') && ghdl -e $(cat spec/entity.txt 2>/dev/null || echo 'top') && ghdl -r $(cat spec/entity.txt 2>/dev/null || echo 'top') --assert-level=error",
+    "lintCmd": "ghdl -s --std=08 $(find . -name \"*.vhdl\" -o -name \"*.vhd\")",
+    "typeCheckCmd": "",
+    "buildCmd": "",
+    "installCmd": "apt-get install -y ghdl 2>/dev/null || brew install ghdl 2>/dev/null",
+    "versionFile": "",
+    "configFile": "",
+    "extensions": [
+      ".vhdl",
+      ".vhd"
+    ],
+    "detectFiles": [],
+    "coverageCmd": ""
+  },
+  "verilog": {
+    "label": "Verilog/SystemVerilog",
+    "testCmd": "iverilog -o testbench $(find . -name '*.v' -o -name '*.sv') && vvp testbench",
+    "lintCmd": "verilator --lint-only $(find . -name '*.v' -o -name '*.sv')",
+    "typeCheckCmd": "",
+    "buildCmd": "",
+    "installCmd": "apt-get install -y iverilog verilator 2>/dev/null || brew install icarus-verilog verilator 2>/dev/null",
+    "versionFile": "",
+    "configFile": "",
+    "extensions": [
+      ".v",
+      ".sv"
+    ],
+    "detectFiles": [],
+    "coverageCmd": ""
+  },
+  "generic": {
+    "label": "Generic",
+    "testCmd": "echo 'No test command configured for this project type'",
+    "lintCmd": "",
+    "typeCheckCmd": "",
+    "buildCmd": "",
+    "installCmd": "",
+    "versionFile": "",
+    "configFile": "",
+    "extensions": [],
+    "detectFiles": [],
+    "coverageCmd": ""
+  },
+  "flutter": {
+    "label": "Flutter",
+    "testCmd": "flutter test",
+    "lintCmd": "flutter analyze",
+    "typeCheckCmd": "dart analyze",
+    "buildCmd": "flutter build apk --debug",
+    "installCmd": "flutter pub get",
+    "versionFile": "",
+    "configFile": "pubspec.yaml",
+    "extensions": [
+      ".dart"
+    ],
+    "detectFiles": [
+      "pubspec.yaml"
+    ],
+    "coverageCmd": "flutter test --coverage"
+  },
+  "java": {
+    "label": "Java",
+    "testCmd": "mvn test",
+    "lintCmd": "mvn checkstyle:check",
+    "typeCheckCmd": "",
+    "buildCmd": "mvn compile",
+    "installCmd": "mvn install -DskipTests",
+    "versionFile": ".java-version",
+    "configFile": "pom.xml",
+    "extensions": [
+      ".java"
+    ],
+    "detectFiles": [
+      "pom.xml",
+      "build.gradle"
+    ],
+    "coverageCmd": "mvn verify -DskipTests=false jacoco:report 2>/dev/null || mvn test"
+  },
+  "kotlin": {
+    "label": "Kotlin",
+    "testCmd": "./gradlew test",
+    "lintCmd": "./gradlew ktlintCheck",
+    "typeCheckCmd": "",
+    "buildCmd": "./gradlew build",
+    "installCmd": "./gradlew build",
+    "versionFile": ".java-version",
+    "configFile": "build.gradle.kts",
+    "extensions": [
+      ".kt",
+      ".kts"
+    ],
+    "detectFiles": [
+      "build.gradle.kts"
+    ],
+    "coverageCmd": "./gradlew test jacocoTestReport 2>/dev/null || ./gradlew test"
+  },
+  "dotnet": {
+    "label": ".NET",
+    "testCmd": "dotnet test",
+    "lintCmd": "dotnet format --verify-no-changes",
+    "typeCheckCmd": "",
+    "buildCmd": "dotnet build",
+    "installCmd": "dotnet restore",
+    "versionFile": "global.json",
+    "configFile": "",
+    "extensions": [
+      ".cs",
+      ".fs",
+      ".vb"
+    ],
+    "detectFiles": [
+      "*.csproj",
+      "*.sln"
+    ],
+    "coverageCmd": "dotnet test --collect:\"XPlat Code Coverage\""
+  },
+  "matlab": {
+    "label": "MATLAB",
+    "testCmd": "matlab -batch \"runtests('tests')\"",
+    "lintCmd": "matlab -batch \"checkcode('src/')\"",
+    "typeCheckCmd": "",
+    "buildCmd": "",
+    "installCmd": "",
+    "versionFile": "",
+    "configFile": "",
+    "extensions": [
+      ".m"
+    ],
+    "detectFiles": [],
+    "coverageCmd": "matlab -batch \"runtests;\""
+  },
+  "elixir": {
+    "label": "Elixir",
+    "testCmd": "mix test",
+    "lintCmd": "mix credo --strict",
+    "typeCheckCmd": "mix dialyzer",
+    "buildCmd": "mix compile",
+    "installCmd": "mix deps.get",
+    "versionFile": ".tool-versions",
+    "configFile": "mix.exs",
+    "extensions": [".ex", ".exs"],
+    "detectFiles": ["mix.exs"],
+    "coverageCmd": "mix test --cover"
+  },
+  "erlang": {
+    "label": "Erlang",
+    "testCmd": "rebar3 eunit",
+    "lintCmd": "elvis",
+    "typeCheckCmd": "dialyzer --src src",
+    "buildCmd": "rebar3 compile",
+    "installCmd": "rebar3 get-deps",
+    "versionFile": ".tool-versions",
+    "configFile": "rebar.config",
+    "extensions": [".erl", ".hrl"],
+    "detectFiles": ["rebar.config"],
+    "coverageCmd": "rebar3 cover"
+  },
+  "ruby": {
+    "label": "Ruby",
+    "testCmd": "bundle exec rspec",
+    "lintCmd": "bundle exec rubocop",
+    "typeCheckCmd": "bundle exec srb tc",
+    "buildCmd": "bundle exec rake build",
+    "installCmd": "bundle install",
+    "versionFile": ".ruby-version",
+    "configFile": "Gemfile",
+    "extensions": [".rb"],
+    "detectFiles": ["Gemfile", "Rakefile", ".rspec"],
+    "coverageCmd": "bundle exec simplecov"
+  },
+  "php": {
+    "label": "PHP",
+    "testCmd": "vendor/bin/phpunit",
+    "lintCmd": "vendor/bin/phpcs",
+    "typeCheckCmd": "vendor/bin/phpstan analyse",
+    "buildCmd": "composer dump-autoload",
+    "installCmd": "composer install",
+    "versionFile": ".php-version",
+    "configFile": "composer.json",
+    "extensions": [".php"],
+    "detectFiles": ["composer.json"],
+    "coverageCmd": "vendor/bin/phpunit --coverage-text"
+  },
+  "swift": {
+    "label": "Swift",
+    "testCmd": "swift test",
+    "lintCmd": "swiftlint",
+    "typeCheckCmd": "swift build",
+    "buildCmd": "swift build",
+    "installCmd": "swift package resolve",
+    "versionFile": ".swift-version",
+    "configFile": "Package.swift",
+    "extensions": [".swift"],
+    "detectFiles": ["Package.swift"],
+    "coverageCmd": "swift test --enable-code-coverage"
+  },
+  "scala": {
+    "label": "Scala",
+    "testCmd": "sbt test",
+    "lintCmd": "scalafmt --test",
+    "typeCheckCmd": "sbt compile",
+    "buildCmd": "sbt compile",
+    "installCmd": "sbt update",
+    "versionFile": ".scala-version",
+    "configFile": "build.sbt",
+    "extensions": [".scala", ".sc"],
+    "detectFiles": ["build.sbt", "build.sc"],
+    "coverageCmd": "sbt coverage test"
+  },
+  "r": {
+    "label": "R",
+    "testCmd": "Rscript -e 'testthat::test_dir(\"tests\")'",
+    "lintCmd": "Rscript -e 'lintr::lint_dir(\".\")'",
+    "typeCheckCmd": "",
+    "buildCmd": "R CMD build .",
+    "installCmd": "Rscript -e 'install.packages(\".\", repos=NULL, type=\"source\")'",
+    "versionFile": ".Rversion",
+    "configFile": "DESCRIPTION",
+    "extensions": [".r", ".R"],
+    "detectFiles": ["DESCRIPTION"],
+    "coverageCmd": "Rscript -e 'covr::package_coverage()'"
+  },
+  "haskell": {
+    "label": "Haskell",
+    "testCmd": "cabal test",
+    "lintCmd": "hlint .",
+    "typeCheckCmd": "ghc -fno-code",
+    "buildCmd": "cabal build",
+    "installCmd": "cabal build",
+    "versionFile": "",
+    "configFile": "cabal.project",
+    "extensions": [".hs", ".lhs"],
+    "detectFiles": ["cabal.project", "stack.yaml", "*.cabal"],
+    "coverageCmd": ""
+  },
+  "perl": {
+    "label": "Perl",
+    "testCmd": "prove -l",
+    "lintCmd": "perlcritic",
+    "typeCheckCmd": "",
+    "buildCmd": "perl Makefile.PL && make",
+    "installCmd": "cpanm --installdeps .",
+    "versionFile": ".perl-version",
+    "configFile": "cpanfile",
+    "extensions": [".pl", ".pm", ".t"],
+    "detectFiles": ["Makefile.PL", "cpanfile", "dist.ini"],
+    "coverageCmd": "cover -test"
+  },
+  "lua": {
+    "label": "Lua",
+    "testCmd": "busted",
+    "lintCmd": "luacheck .",
+    "typeCheckCmd": "",
+    "buildCmd": "luarocks make",
+    "installCmd": "luarocks install",
+    "versionFile": ".lua-version",
+    "configFile": ".luarc.json",
+    "extensions": [".lua"],
+    "detectFiles": ["*.rockspec", ".luarc.json"],
+    "coverageCmd": "luacov"
+  },
+  "dart": {
+    "label": "Dart",
+    "testCmd": "dart test",
+    "lintCmd": "dart analyze",
+    "typeCheckCmd": "dart analyze",
+    "buildCmd": "dart compile exe",
+    "installCmd": "dart pub get",
+    "versionFile": ".dart-version",
+    "configFile": "pubspec.yaml",
+    "extensions": [".dart"],
+    "detectFiles": ["pubspec.yaml"],
+    "coverageCmd": "dart test --coverage=coverage"
+  },
+  "flutter": {
+    "label": "Flutter",
+    "testCmd": "flutter test",
+    "lintCmd": "flutter analyze",
+    "typeCheckCmd": "flutter analyze",
+    "buildCmd": "flutter build apk",
+    "installCmd": "flutter pub get",
+    "versionFile": ".fvmrc",
+    "configFile": "pubspec.yaml",
+    "extensions": [".dart"],
+    "detectFiles": ["pubspec.yaml"],
+    "coverageCmd": "flutter test --coverage"
+  },
+  "ocaml": {
+    "label": "OCaml",
+    "testCmd": "dune runtest",
+    "lintCmd": "dune build @lint",
+    "typeCheckCmd": "dune build",
+    "buildCmd": "dune build",
+    "installCmd": "opam install . --deps-only",
+    "versionFile": ".ocaml-version",
+    "configFile": "dune-project",
+    "extensions": [".ml", ".mli"],
+    "detectFiles": ["dune-project"],
+    "coverageCmd": "bisect-ppx"
+  },
+  "clojure": {
+    "label": "Clojure",
+    "testCmd": "lein test",
+    "lintCmd": "clj-kondo --lint src",
+    "typeCheckCmd": "clojure -M:check",
+    "buildCmd": "lein uberjar",
+    "installCmd": "lein deps",
+    "versionFile": "",
+    "configFile": "project.clj",
+    "extensions": [".clj", ".cljs", ".cljc"],
+    "detectFiles": ["project.clj", "deps.edn", "shadow-cljs.edn"],
+    "coverageCmd": "lein cloverage"
+  },
+  "zig": {
+    "label": "Zig",
+    "testCmd": "zig build test",
+    "lintCmd": "zig fmt --check src/",
+    "typeCheckCmd": "zig build",
+    "buildCmd": "zig build",
+    "installCmd": "zig build",
+    "versionFile": "",
+    "configFile": "build.zig",
+    "extensions": [".zig"],
+    "detectFiles": ["build.zig"],
+    "coverageCmd": ""
+  },
+  "julia": {
+    "label": "Julia",
+    "testCmd": "julia -e 'using Pkg; Pkg.test()'",
+    "lintCmd": "julia -e 'using JuliaFormatter; format(\".\", overwrite=false)'",
+    "typeCheckCmd": "",
+    "buildCmd": "julia -e 'using Pkg; Pkg.build()'",
+    "installCmd": "julia -e 'using Pkg; Pkg.instantiate()'",
+    "versionFile": ".julia-version",
+    "configFile": "Project.toml",
+    "extensions": [".jl"],
+    "detectFiles": ["Project.toml", "Manifest.toml"],
+    "coverageCmd": "julia -e 'using Coverage; process_folder()'"
+  },
+  "nim": {
+    "label": "Nim",
+    "testCmd": "nimble test",
+    "lintCmd": "nimpretty --check src/",
+    "typeCheckCmd": "nim check",
+    "buildCmd": "nimble build",
+    "installCmd": "nimble install",
+    "versionFile": ".nim-version",
+    "configFile": "*.nimble",
+    "extensions": [".nim", ".nims"],
+    "detectFiles": ["*.nimble"],
+    "coverageCmd": ""
+  },
+  "groovy": {
+    "label": "Groovy",
+    "testCmd": "gradle test",
+    "lintCmd": "codenarc",
+    "typeCheckCmd": "groovyc",
+    "buildCmd": "gradle build",
+    "installCmd": "gradle build",
+    "versionFile": ".groovy-version",
+    "configFile": "build.gradle",
+    "extensions": [".groovy", ".gradle"],
+    "detectFiles": ["build.gradle", "gradlew"],
+    "coverageCmd": "gradle jacocoTestReport"
+  }
+}

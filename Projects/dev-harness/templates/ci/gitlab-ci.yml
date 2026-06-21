@@ -1,0 +1,59 @@
+# CI/CD pipeline for {{stackLabel}} projects scaffolded by Dev Harness
+# Stack: {{stack}} — CI image selected via workflow rules.
+stages:
+  - lint
+  - test
+  - coverage
+  - gate
+
+# Select the container image based on the rendered stack value.
+# {{stack}} is substituted at scaffold time, so exactly one rule matches.
+workflow:
+  rules:
+    - if: {{stack}} == 'python'
+      variables:
+        CI_IMAGE: python:3.12
+    - if: {{stack}} == 'go'
+      variables:
+        CI_IMAGE: golang:latest
+    - if: {{stack}} == 'rust'
+      variables:
+        CI_IMAGE: rust:latest
+    - if: {{stack}} == 'java'
+      variables:
+        CI_IMAGE: maven:latest
+    - if: {{stack}} == 'dotnet'
+      variables:
+        CI_IMAGE: mcr.microsoft.com/dotnet/sdk:latest
+    - when: always
+      variables:
+        CI_IMAGE: node:lts
+
+lint:
+  stage: lint
+  image: $CI_IMAGE
+  script:
+    - {{installCmd}}
+    - {{lintCmd}}
+
+test:
+  stage: test
+  image: $CI_IMAGE
+  script:
+    - {{installCmd}}
+    - {{testCmd}}
+
+coverage:
+  stage: coverage
+  image: $CI_IMAGE
+  script:
+    - {{installCmd}}
+    - {{testCmd}}
+
+gate:
+  stage: gate
+  image: node:lts
+  script:
+    - npm install -g dev-harness-cli
+    - dev-harness validate --json
+  needs: [coverage]

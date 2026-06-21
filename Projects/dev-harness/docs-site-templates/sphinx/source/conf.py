@@ -1,0 +1,14 @@
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.viewcode']
+templates_path = ['_templates']
+source_suffix = '.rst'
+master_doc = 'index'
+project = '{{stackLabel}} Project'
+copyright = '2026, Your Name'
+author = 'Your Name'
+version = '0.1.0'
+release = '0.1.0'
+language = 'en'
+exclude_patterns = ['_build']
+pygments_style = 'sphinx'
+html_theme = 'sphinx_rtd_theme'
+html_static_path = ['_static']
