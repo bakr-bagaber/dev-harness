@@ -172,7 +172,28 @@ dev-harness run
 
 # Or override tool for this run only
 dev-harness run --agent-tool claude-code
+
+# Disable TUI — one-shot text output (for logs/CI)
+dev-harness run --agent-tool hermes --no-tui
+
+# JSON output (machine-parseable, no TUI)
+dev-harness run --agent-tool hermes --json
 ```
+
+### Live TUI Dashboard
+
+When run in a terminal, `dev-harness run` launches a live split-pane TUI dashboard (powered by Ink):
+
+- **Top pane** — pipeline state: phases with checkmarks, current feature/task, mode, retry count
+- **Bottom pane** — scrolling agent output (stdout streams in real time)
+- **Keyboard controls** — `p` pause, `r` resume, `q`/`Esc` quit, `Ctrl+C` safe exit
+
+The TUI automatically falls back to one-shot text rendering when:
+- stdout is not a TTY (piped to file, CI environment)
+- `--no-tui` flag is passed
+- `--json` flag is passed
+
+See the [README TUI section](../README.md#️-live-tui-dashboard) for full details.
 
 ### What the Orchestrator Does
 

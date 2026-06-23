@@ -33,6 +33,7 @@
   - [Gate Validation](#gate-validation)
   - [Ralph Inner / Outer Loops](#ralph-inner--outer-loops)
   - [Multi-Agent Committee Review](#multi-agent-committee-review)
+  - [🖥️ Live TUI Dashboard](#️-live-tui-dashboard)
 - [📁 Project Structure](#-project-structure)
 - [⚙️ CLI Reference](#️-cli-reference)
 - [🔧 Configuration](#-configuration)
@@ -203,6 +204,60 @@ flowchart TB
 ```
 
 > **Tier 1** tools are spawnable TUI agents — dev-harness runs them per task with fresh sessions and API retry. **Tier 2** tools are IDE extensions — dev-harness writes instructions and the agent reads them natively.
+
+### 🖥️ Live TUI Dashboard
+
+When you run `dev-harness run` in a terminal, dev-harness launches a **live split-pane TUI dashboard** (powered by [Ink](https://github.com/vadimdemedes/ink)):
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  🎯 Dev Harness — Pipeline Dashboard                     │
+│                                                          │
+│  Phases:  ✓ DEFINE  ✓ PLAN  ● BUILD  ○ VERIFY  ○ SHIP   │
+│  Feature: auth-login (2/5 tasks)                         │
+│  Task:    implement JWT validation                       │
+│  Mode:    autopilot  |  Retries: 0/10  |  Iteration: 3  │
+│ ─────────────────────────────────────────────────────── │
+│  Agent Output                                            │
+│  ● Spawning hermes for task: implement JWT validation    │
+│  ✓ hermes completed task successfully.                   │
+│  ✓ Task "jwt-validate" validated. Advancing.             │
+│  ● Spawning hermes for task: add refresh token endpoint  │
+│  ...                                                     │
+│                                                          │
+│  [p] pause  [r] resume  [q] quit  [Ctrl+C] safe exit    │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Top pane** — persistent pipeline state: phases with checkmarks, current feature/task, mode, retry count, iteration
+- **Bottom pane** — scrolling agent output (stdout streams here in real time)
+- **Status bar** — keyboard controls + elapsed time
+
+#### Starting the TUI
+
+```bash
+# TUI starts automatically when run in a terminal (TTY)
+dev-harness run --agent-tool hermes
+
+# Disable TUI — use one-shot text output instead (for logs/CI)
+dev-harness run --agent-tool hermes --no-tui
+
+# JSON output (no TUI, machine-parseable)
+dev-harness run --agent-tool hermes --json
+```
+
+> **Automatic fallback:** If stdout is not a TTY (e.g. piped to a file, run in CI), the TUI is skipped and dev-harness falls back to one-shot text rendering. `--json` and `--no-tui` also disable the TUI explicitly.
+
+#### Keyboard Controls
+
+| Key | Action |
+|-----|--------|
+| `p` | Pause the pipeline (saves state — resume with `dev-harness resume`) |
+| `r` | Resume the pipeline (unpauses in-place) |
+| `q` / `Esc` | Quit the dashboard (pipeline pauses safely) |
+| `Ctrl+C` | Safe exit — pauses pipeline, saves state, exits cleanly |
+
+> **Safe exit:** Quitting via `q` or `Ctrl+C` does **not** lose progress — the pipeline state is saved to `harness/config.json` (`paused: true`), and you can resume with `dev-harness resume` followed by `dev-harness run`.
 
 ---
 

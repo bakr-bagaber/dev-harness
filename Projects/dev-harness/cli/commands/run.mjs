@@ -14,11 +14,12 @@
 
 import { resolve } from 'node:path';
 import { EXIT } from '../lib/errors.mjs';
-import { loadConfig } from '../lib/state.mjs';
+import { loadConfig, set as configSet } from '../lib/state.mjs';
 import { startSupervisor } from '../lib/supervisor.mjs';
 import { renderDashboard } from '../lib/dashboard.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';
 import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
+import { startLiveDashboard, stopLiveDashboard } from '../tui/dashboard.mjs';
 
 // Tier-1 tools that support spawning (fresh session per task)
 const SPAWNABLE_TOOLS = ['hermes', 'openclaw', 'claude-code'];
@@ -33,6 +34,8 @@ const ADAPTER_LOADERS = {
 export default async function runCommand(args) {
   const { json, targetDir } = parseCommandArgs(args);
   const explicitTool = args.flags?.agentTool || args.flags?.['agent-tool'];
+  const noTui = args.flags?.['no-tui'] === true || args.flags?.['no-tui'] === 'true';
+  const useTui = !json && !noTui;
 
   // Load config to get configured tool
   const { config, ok } = loadConfig(targetDir);
@@ -89,12 +92,29 @@ export default async function runCommand(args) {
     return;
   }
 
-  // Render initial dashboard
-  renderDashboard(targetDir, { json });
+  // Render initial dashboard (or start live TUI)
+  let tuiStarted = false;
+  if (useTui) {
+    tuiStarted = startLiveDashboard(targetDir, {
+      onKey: ({ action }) => {
+        if (action === 'pause') {
+          configSet(targetDir, 'paused', true);
+        } else if (action === 'resume') {
+          configSet(targetDir, 'paused', false);
+        }
+      },
+    });
+  }
+  if (!tuiStarted) {
+    // TUI not available (not a TTY or --no-tui) — fall back to one-shot text render
+    renderDashboard(targetDir, { json });
+  }
 
-  if (!json) {
+  if (!json && !tuiStarted) {
     emitHuman(`\n  🚀 Starting orchestrator with ${tool}...\n`);
     emitHuman(`  Press Ctrl+C to pause and exit safely.\n\n`);
+  } else if (tuiStarted) {
+    // TUI is rendering — keyboard controls shown in-dashboard
   }
 
   // Set up graceful shutdown
@@ -106,7 +126,6 @@ export default async function runCommand(args) {
       emitHuman(`\n\n  ⏸ Received ${signal}. Pausing pipeline...\n`);
     }
     // Save state — pipeline will be paused
-    const { set: configSet } = await import('../lib/state.mjs');
     configSet(targetDir, 'paused', true);
     if (!json) {
       emitHuman('  State saved. Run: dev-harness resume to continue.\n');
@@ -123,12 +142,18 @@ export default async function runCommand(args) {
     adapter,
     json,
     verbose: !json,
+    useTui: tuiStarted,
     apiRetries: config.supervisor?.apiRetries ?? 5,
     backoffMs: config.supervisor?.backoffMs ?? 60000,
     onTransition: () => {
       // Dashboard is rendered inside supervisor on each transition
     },
   });
+
+  // Stop the live TUI if it was started
+  if (tuiStarted) {
+    stopLiveDashboard();
+  }
 
   // Final output
   if (json) {
@@ -140,7 +165,9 @@ export default async function runCommand(args) {
       ...result,
     });
   } else {
-    renderDashboard(targetDir);
+    if (!tuiStarted) {
+      renderDashboard(targetDir);
+    }
     if (result.status === 'complete') {
       emitHuman('\n  ✓ Pipeline complete! All phases done.\n');
     } else if (result.status === 'paused') {

@@ -17,6 +17,7 @@ import { buildCurrentTaskPrompt, writeTaskPrompt } from './task-prompt.mjs';
 import { runPhase } from './ralph-inner.mjs';
 import { continuePipeline } from './ralph-outer.mjs';
 import { renderDashboard } from './dashboard.mjs';
+import { appendAgentOutput } from '../tui/dashboard.mjs';
 import pRetry from 'p-retry';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -127,10 +128,20 @@ export async function startSupervisor(targetDir, opts) {
     adapter,
     json = false,
     verbose = true,
+    useTui = false,
     apiRetries = DEFAULT_API_RETRIES,
     backoffMs = DEFAULT_BACKOFF_MS,
     onTransition = null,
   } = opts;
+
+  // Helper: route output to TUI pane or stdout depending on mode
+  const emit = (msg) => {
+    if (useTui) {
+      appendAgentOutput(msg);
+    } else if (verbose && !json) {
+      process.stdout.write(msg);
+    }
+  };
 
   let apiRetryCount = 0;
   let pipelineComplete = false;
@@ -139,9 +150,7 @@ export async function startSupervisor(targetDir, opts) {
     // Check if pipeline is paused
     const { config } = loadConfig(targetDir);
     if (config.paused) {
-      if (verbose && !json) {
-        process.stdout.write('\n  ⏸ Pipeline is paused. Run: dev-harness resume\n');
-      }
+      emit('\n  ⏸ Pipeline is paused. Run: dev-harness resume\n');
       return { status: 'paused', message: 'Pipeline paused by user or escalation' };
     }
 
@@ -158,13 +167,11 @@ export async function startSupervisor(targetDir, opts) {
     if (!prompt) {
       // No task to work on — phase may be complete, try advancing
       if (verbose && !json) {
-        process.stdout.write('\n  ● No pending tasks. Checking if phase is complete...\n');
+        emit('\n  ● No pending tasks. Checking if phase is complete...\n');
       }
       const advanceResult = await continuePipeline(targetDir, phase, { json, verbose });
       if (advanceResult.status === 'complete') {
-        if (verbose && !json) {
-          process.stdout.write('\n✓ Pipeline complete. All phases done.\n');
-        }
+        emit('\n✓ Pipeline complete. All phases done.\n');
         return { status: 'complete', message: 'Pipeline complete' };
       }
       if (advanceResult.status === 'instruction') {
@@ -176,10 +183,15 @@ export async function startSupervisor(targetDir, opts) {
 
     // Render dashboard before spawning agent
     if (onTransition) { onTransition({ phase, feature, task }); }
-    renderDashboard(targetDir, { json });
+    if (!useTui) {
+      renderDashboard(targetDir, { json });
+    }
 
-    if (verbose && !json) {
+    if (verbose && !json && !useTui) {
       process.stdout.write(`\n  ● Spawning ${agentTool} for task: ${task?.description || phase}\n`);
+    }
+    if (useTui) {
+      appendAgentOutput(`● Spawning ${agentTool} for task: ${task?.description || phase}\n`);
     }
 
     // Spawn agent
@@ -190,15 +202,20 @@ export async function startSupervisor(targetDir, opts) {
         taskPrompt: prompt,
         targetDir,
         adapter,
-        streamOutput: !json,
+        streamOutput: !json && !useTui,
       });
+
+      // When TUI is active, stream agent stdout to the TUI output pane
+      if (useTui && spawnResult.process?.stdout) {
+        spawnResult.process.stdout.on('data', (d) => {
+          appendAgentOutput(d.toString());
+        });
+      }
 
       // Wait for agent to complete
       agentResult = await waitForCompletion(spawnResult.process);
     } catch (err) {
-      if (verbose && !json) {
-        process.stdout.write(`\n  ✗ Failed to spawn ${agentTool}: ${err.message}\n`);
-      }
+      emit(`\n  ✗ Failed to spawn ${agentTool}: ${err.message}\n`);
       return { status: 'error', message: `Spawn failed: ${err.message}` };
     }
 
@@ -210,8 +227,11 @@ export async function startSupervisor(targetDir, opts) {
       // Success — reset API retry counter
       apiRetryCount = 0;
 
-      if (verbose && !json) {
+      if (verbose && !json && !useTui) {
         process.stdout.write(`\n  ✓ ${agentTool} completed task successfully.\n`);
+      }
+      if (useTui) {
+        appendAgentOutput(`✓ ${agentTool} completed task successfully.\n`);
       }
 
       // Run validation
@@ -239,7 +259,7 @@ export async function startSupervisor(targetDir, opts) {
             configSet(targetDir, 'retryCount', 0);
             configSet(targetDir, 'taskRetryCount', 0);
             if (verbose && !json) {
-              process.stdout.write(`\n  ✓ Task "${task.id}" validated. Advancing.\n`);
+              emit(`\n  ✓ Task "${task.id}" validated. Advancing.\n`);
             }
           } else {
             // Task failed validation — increment task retry
@@ -248,20 +268,20 @@ export async function startSupervisor(targetDir, opts) {
             configSet(targetDir, 'taskRetryCount', currentTaskRetry);
             if (currentTaskRetry >= maxRetries) {
               if (verbose && !json) {
-                process.stdout.write(`\n  ✗ Task retries exhausted (${currentTaskRetry}/${maxRetries}). Escalating.\n`);
+                emit(`\n  ✗ Task retries exhausted (${currentTaskRetry}/${maxRetries}). Escalating.\n`);
               }
               configSet(targetDir, 'paused', true);
               return { status: 'escalated', message: `Task retries exhausted for ${task.id}` };
             }
             if (verbose && !json) {
-              process.stdout.write(`\n  ↻ Task validation failed (${currentTaskRetry}/${maxRetries}). Retrying.\n`);
+              emit(`\n  ↻ Task validation failed (${currentTaskRetry}/${maxRetries}). Retrying.\n`);
             }
             continue; // Retry same task
           }
         } else {
           // Gates disabled — just advance
           if (verbose && !json) {
-            process.stdout.write('\n  ● Gates disabled. Advancing to next task.\n');
+            emit('\n  ● Gates disabled. Advancing to next task.\n');
           }
         }
       } else {
@@ -305,8 +325,8 @@ export async function startSupervisor(targetDir, opts) {
           async (attemptCount) => {
             if (verbose && !json) {
               const delay = getBackoffDelay(attemptCount, backoffMs);
-              process.stdout.write(`\n  ⚠ ${agentTool} API error (attempt ${attemptCount}/${apiRetries}).\n`);
-              process.stdout.write(`  Retrying in ${Math.round(delay / 1000)}s...\n`);
+              emit(`\n  ⚠ ${agentTool} API error (attempt ${attemptCount}/${apiRetries}).\n`);
+              emit(`  Retrying in ${Math.round(delay / 1000)}s...\n`);
             }
             // Re-spawn the agent for the same task.
             const retrySpawn = await spawnAgent({
@@ -340,7 +360,7 @@ export async function startSupervisor(targetDir, opts) {
         apiRetryCount = 0;
         if (agentResult.exitCode === 0) {
           if (verbose && !json) {
-            process.stdout.write(`\n  ✓ ${agentTool} recovered and completed task.\n`);
+            emit(`\n  ✓ ${agentTool} recovered and completed task.\n`);
           }
         }
         // Loop back to process agentResult (success → validate, non-API fail → task retry)
@@ -348,8 +368,8 @@ export async function startSupervisor(targetDir, opts) {
       } catch (retryErr) {
         // Retries exhausted — pause pipeline, notify human.
         if (verbose && !json) {
-          process.stdout.write(`\n  ✗ API retries exhausted (${apiRetries}). Pausing pipeline.\n`);
-          process.stdout.write(`  The ${agentTool} API appears to be down. Run: dev-harness resume when API recovers.\n`);
+          emit(`\n  ✗ API retries exhausted (${apiRetries}). Pausing pipeline.\n`);
+          emit(`  The ${agentTool} API appears to be down. Run: dev-harness resume when API recovers.\n`);
         }
         configSet(targetDir, 'paused', true);
         return {
@@ -362,9 +382,9 @@ export async function startSupervisor(targetDir, opts) {
 
     // Non-API failure — treat as task failure
     if (verbose && !json) {
-      process.stdout.write(`\n  ✗ ${agentTool} exited with code ${agentResult.exitCode}.\n`);
+      emit(`\n  ✗ ${agentTool} exited with code ${agentResult.exitCode}.\n`);
       if (agentResult.stderr) {
-        process.stdout.write(`  Error: ${agentResult.stderr.slice(-300)}\n`);
+        emit(`  Error: ${agentResult.stderr.slice(-300)}\n`);
       }
     }
 
@@ -374,15 +394,11 @@ export async function startSupervisor(targetDir, opts) {
       const maxRetries = config.maxRetries ?? 10;
       configSet(targetDir, 'taskRetryCount', currentTaskRetry);
       if (currentTaskRetry >= maxRetries) {
-        if (verbose && !json) {
-          process.stdout.write(`\n  ✗ Task retries exhausted (${currentTaskRetry}/${maxRetries}). Escalating.\n`);
-        }
+        emit(`\n  ✗ Task retries exhausted (${currentTaskRetry}/${maxRetries}). Escalating.\n`);
         configSet(targetDir, 'paused', true);
         return { status: 'escalated', message: `Task retries exhausted for ${task.id}` };
       }
-      if (verbose && !json) {
-        process.stdout.write(`\n  ↻ Retrying task (${currentTaskRetry}/${maxRetries})...\n`);
-      }
+      emit(`\n  ↻ Retrying task (${currentTaskRetry}/${maxRetries})...\n`);
     } else {
       // Deliverable-retry phase
       const currentRetry = (configGet(targetDir, 'retryCount') ?? 0) + 1;
