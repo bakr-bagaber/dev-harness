@@ -25,6 +25,7 @@ import {
   KNOWN_AGENT_TOOLS,
 } from '../lib/scaffold.mjs';
 import { getToolEntry } from '../lib/tool-registry.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 
 // ── Git helpers ──────────────────────────────────────────────────────────────
@@ -320,7 +321,7 @@ export default async function initCommand(args) {
     const message = errors.length > 0
       ? `Created ${created.length} file(s) with ${errors.length} error(s)`
       : `Created ${created.length} file(s) for stack "${stack}"`;
-    process.stdout.write(JSON.stringify({
+    emitJson({
       command: 'init',
       status,
       message,
@@ -330,7 +331,7 @@ export default async function initCommand(args) {
       files: created,
       git: gitMessages,
       errors,
-    }) + '\n');
+    });
     if (errors.length > 0) {
       process.exit(EXIT.VALIDATION_FAILURE);
     }
@@ -339,13 +340,13 @@ export default async function initCommand(args) {
 
   // Human output
   for (const f of created) {
-    process.stdout.write(`  ✓ ${f}\n`);
+    emitHuman(`  ✓ ${f}\n`);
   }
   for (const e of errors) {
     process.stderr.write(`  ✗ ${e}\n`);
   }
   for (const g of gitMessages) {
-    process.stdout.write(`  ● ${g}\n`);
+    emitHuman(`  ● ${g}\n`);
   }
-  process.stdout.write(`\nCreated ${created.length} file(s) for stack "${stack}" in ${targetDir}\n`);
+  emitHuman(`\nCreated ${created.length} file(s) for stack "${stack}" in ${targetDir}\n`);
 }

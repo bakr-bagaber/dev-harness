@@ -127,26 +127,6 @@ export function validateAgainstSchema(obj, schemaPath) {
 // imported them continue to work.
 
 /**
- * Check a value against a single type string.
- * Kept for backward compatibility with tests that may import it.
- * @param {*} value
- * @param {string} type
- * @returns {boolean}
- */
-export function matchesType(value, type) {
-  switch (type) {
-    case 'string':  return typeof value === 'string';
-    case 'number':  return typeof value === 'number' && !Number.isNaN(value);
-    case 'integer': return typeof value === 'number' && Number.isInteger(value);
-    case 'boolean': return typeof value === 'boolean';
-    case 'array':   return Array.isArray(value);
-    case 'object':  return typeof value === 'object' && value !== null && !Array.isArray(value);
-    case 'null':    return value === null;
-    default:        return true; // unknown types pass (forward-compat)
-  }
-}
-
-/**
  * Clear the schema cache. Useful for tests that swap schema files on disk.
  */
 export function clearSchemaCache() {

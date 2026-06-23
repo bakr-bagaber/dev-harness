@@ -6,6 +6,8 @@
 dev-harness status        # Where are we?
 dev-harness phase <name>  # Invoke a phase
 dev-harness validate      # Check gate criteria
+dev-harness run           # Start orchestrator (Tier-1 tools only)
+dev-harness select-tool   # Choose backend agent tool
 ```
 
 ## Project

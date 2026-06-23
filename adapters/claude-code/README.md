@@ -21,10 +21,23 @@ claude
 - `AGENTS.md` — canonical harness conventions (always generated)
 - `harness-config.json` — with `agentTool: "claude-code"`
 
+## Files in Adapter Directory
+
+- `spawn.mjs` — **Tier-1 spawn adapter** for orchestrator mode (`dev-harness run`).
+  Spawns Claude Code per task with `claude -p --dangerously-skip-permissions <prompt>`
+  for non-interactive execution with session isolation.
+
 ## How It Works
 
+### Manual Mode (Tier 2)
 Claude Code reads `CLAUDE.md` on startup. The generated `CLAUDE.md` includes
 the harness quick-start, phase pipeline, and commands — same content as
 `AGENTS.md` but in the file Claude looks for. Claude then follows the phase
 instructions emitted by `harness-dev phase <name>` and runs
 `harness-dev validate` after each phase.
+
+### Orchestrator Mode (Tier 1)
+Use `dev-harness run --agent-tool claude-code` to start the orchestrator. The
+supervisor spawns Claude Code per task via `spawn.mjs` in non-interactive print
+mode, monitors for completion, handles API downtime with exponential backoff,
+and auto-advances through the pipeline with a live dashboard.

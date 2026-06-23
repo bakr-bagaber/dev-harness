@@ -137,7 +137,16 @@ export function detectStack(targetDir = '.') {
     return { name: 'java',   label: 'Java',       evidence: ['.java files found'] };
   }
 
-  // 3. Kotlin
+  // 3. Flutter — check BEFORE Kotlin/Java because Flutter projects
+  //    contain build.gradle.kts and .kt files from the android/ directory
+  if (hasTop('pubspec.yaml')) {
+    return { name: 'flutter', label: 'Flutter', evidence: ['pubspec.yaml found'] };
+  }
+  if (hasExt('.dart')) {
+    return { name: 'flutter', label: 'Flutter', evidence: ['.dart files found'] };
+  }
+
+  // 4. Kotlin
   if (hasTop('build.gradle.kts')) {
     return { name: 'kotlin', label: 'Kotlin',     evidence: ['build.gradle.kts found'] };
   }

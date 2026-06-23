@@ -14,6 +14,7 @@
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { execGit, getGitRoot, gitTagExists, createGitTag } from '../lib/git.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 export default async function checkpointCommand(args) {
   const { json, targetDir, force } = parseCommandArgs(args);
@@ -25,61 +26,42 @@ export default async function checkpointCommand(args) {
     return;
   }
 
-  const gitRoot = getGitRoot(targetDir);
+  const gitRoot = await getGitRoot(targetDir);
   if (!gitRoot) {
-    const msg = 'Not inside a git repository. Checkpoints require git tags.';
-    if (json) {
-      process.stdout.write(JSON.stringify({ command: 'checkpoint', subcommand: 'create', label, status: 'error', message: msg }) + '\n');
-    } else {
-      process.stderr.write(`Error: ${msg}\n`);
-    }
-    return;
+    emitCmdError({ command: 'checkpoint', subcommand: 'create', json, message: 'Not inside a git repository. Checkpoints require git tags.', label });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 
   // Verify working tree is clean (encourage checkpointing at known states).
   // --force skips this check for users who intentionally checkpoint dirty states.
-  const cleanCheck = execGit('git status --porcelain', gitRoot);
+  const cleanCheck = await execGit('git status --porcelain', gitRoot);
   if (!force && cleanCheck.ok && cleanCheck.stdout.length > 0) {
-    if (json) {
-      process.stdout.write(JSON.stringify({ command: 'checkpoint', subcommand: 'create', label, status: 'error', message: 'Working tree is not clean. Commit or stash changes, or use --force to checkpoint anyway.' }) + '\n');
-    } else {
-      process.stderr.write('Error: Working tree is not clean. Commit or stash changes, or use --force to checkpoint anyway.\n');
-    }
-    return;
+    emitCmdError({ command: 'checkpoint', subcommand: 'create', json, label, message: 'Working tree is not clean. Commit or stash changes, or use --force to checkpoint anyway.' });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 
   const tagName = `manual/${label}`;
 
   // Check tag doesn't already exist
-  if (gitTagExists(tagName, gitRoot)) {
-    const msg = `Tag "${tagName}" already exists. Use a different label.`;
-    if (json) {
-      process.stdout.write(JSON.stringify({ command: 'checkpoint', subcommand: 'create', label, tag: tagName, status: 'error', message: msg }) + '\n');
-    } else {
-      process.stderr.write(`Error: ${msg}\n`);
-    }
-    return;
+  if (await gitTagExists(tagName, gitRoot)) {
+    emitCmdError({ command: 'checkpoint', subcommand: 'create', json, label, tag: tagName, message: `Tag "${tagName}" already exists. Use a different label.` });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 
   // Create the annotated tag
-  const created = createGitTag(tagName, `checkpoint: ${label}`, gitRoot);
+  const created = await createGitTag(tagName, `checkpoint: ${label}`, gitRoot);
 
   if (!created) {
-    const msg = `Failed to create checkpoint tag: ${tagName}`;
-    if (json) {
-      process.stdout.write(JSON.stringify({ command: 'checkpoint', subcommand: 'create', label, tag: tagName, status: 'error', message: msg }) + '\n');
-    } else {
-      process.stderr.write(`Error: ${msg}\n`);
-    }
-    return;
+    emitCmdError({ command: 'checkpoint', subcommand: 'create', json, label, tag: tagName, message: `Failed to create checkpoint tag: ${tagName}` });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 
   // Get the hash the tag points to
-  const hashR = execGit(`git rev-parse --short "${tagName}"`, gitRoot);
+  const hashR = await execGit(`git rev-parse --short "${tagName}"`, gitRoot);
   const hash = hashR.ok ? hashR.stdout : '—';
 
   if (json) {
-    process.stdout.write(JSON.stringify({
+    emitJson({
       command: 'checkpoint',
       subcommand: 'create',
       label,
@@ -87,8 +69,8 @@ export default async function checkpointCommand(args) {
       hash,
       status: 'ok',
       message: `Checkpoint "${tagName}" created (${hash})`,
-    }) + '\n');
+    });
   } else {
-    process.stdout.write(`✓ Checkpoint "${tagName}" created (${hash})\n`);
+    emitHuman(`✓ Checkpoint "${tagName}" created (${hash})\n`);
   }
 }

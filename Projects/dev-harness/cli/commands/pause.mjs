@@ -7,8 +7,9 @@
  * Usage: dev-harness pause [--json]
  */
 import { set } from '../lib/state.mjs';
+import { EXIT } from '../lib/errors.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';
-import { emitJson, emitHuman, emitHumanError } from '../lib/output.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 export default async function pauseCommand(args) {
   const { json, targetDir } = parseCommandArgs(args);
@@ -23,12 +24,14 @@ export default async function pauseCommand(args) {
         ? 'Pipeline paused. Autopilot will stop after current phase gate.'
         : (result.error || 'Failed to pause'),
     });
+    if (!result.ok) { process.exit(EXIT.VALIDATION_FAILURE); }
     return;
   }
 
   if (result.ok) {
     emitHuman('✓ Pipeline paused. Autopilot will stop after current phase gate.\n');
   } else {
-    emitHumanError(`✗ ${result.error}\n`);
+    emitCmdError({ command: 'pause', json, message: result.error || 'Failed to pause' });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 }

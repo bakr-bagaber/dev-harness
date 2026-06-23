@@ -24,6 +24,7 @@ import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { loadFeatureList, saveFeatureList, runPhase, getNextFeature, getNextTask } from '../lib/ralph-inner.mjs';
 import { phaseLabel } from '../lib/command-helpers.mjs';
 import { renderDashboard } from '../lib/dashboard.mjs';
+import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function validateCommand(args) {
   const json = !!(args.json || args.flags?.json);
@@ -55,9 +56,9 @@ export default async function validateCommand(args) {
       };
       if (feature) { out.feature = feature; }
       if (task) { out.task = task; }
-      process.stdout.write(JSON.stringify(out) + '\n');
+      emitJson(out);
     } else {
-      process.stdout.write('Gates disabled. Enable with: dev-harness config set gates.enabled true\n');
+      emitHuman('Gates disabled. Enable with: dev-harness config set gates.enabled true\n');
     }
     return;
   }
@@ -146,7 +147,7 @@ export default async function validateCommand(args) {
       }
     }
 
-    process.stdout.write(JSON.stringify(out) + '\n');
+    emitJson(out);
     if (!result.overall) {
       process.exit(EXIT.VALIDATION_FAILURE);
     }
@@ -156,18 +157,18 @@ export default async function validateCommand(args) {
   // Human output
   const label = phaseLabel(result.phase);
   if (result.overall) {
-    process.stdout.write(`${label} Gate: PASS — ${result.checks.length}/${result.checks.length} checks pass\n`);
+    emitHuman(`${label} Gate: PASS — ${result.checks.length}/${result.checks.length} checks pass\n`);
   } else {
-    process.stdout.write(`${label} Gate: FAIL — ${result.checks.length - result.failures.length}/${result.checks.length} checks pass\n`);
+    emitHuman(`${label} Gate: FAIL — ${result.checks.length - result.failures.length}/${result.checks.length} checks pass\n`);
   }
 
   for (const check of result.checks) {
-    const icon = check.pass ? '  ✅' : '  ❌';
-    process.stdout.write(`${icon} ${check.name}: ${check.detail}\n`);
+    const icon = check.pass ? '  ✓' : '  ✗';
+    emitHuman(`${icon} ${check.name}: ${check.detail}\n`);
   }
 
   if (!result.overall) {
-    process.stdout.write(`\nFailed: ${result.failures.join(', ')}\n`);
+    emitHuman(`\nFailed: ${result.failures.join(', ')}\n`);
   }
 
   // Task-level retry: increment taskRetryCount on per-task validation failure
@@ -177,11 +178,11 @@ export default async function validateCommand(args) {
     const maxRetries = failConfig.maxRetries ?? 10;
     configSet(targetDir, 'taskRetryCount', currentTaskRetry);
     if (currentTaskRetry >= maxRetries) {
-      process.stdout.write(`\n  ✗ Task "${task}" failed ${currentTaskRetry}/${maxRetries} times. Escalating to human.\n`);
-      process.stdout.write(`  Run: dev-harness phase ${phase} to retry, or fix the task manually.\n`);
+      emitHuman(`\n  ✗ Task "${task}" failed ${currentTaskRetry}/${maxRetries} times. Escalating to human.\n`);
+      emitHuman(`  Run: dev-harness phase ${phase} to retry, or fix the task manually.\n`);
       configSet(targetDir, 'paused', true);
     } else {
-      process.stdout.write(`\n  ↻ Task "${task}" failed (${currentTaskRetry}/${maxRetries}). Retry with fresh context.\n`);
+      emitHuman(`\n  ↻ Task "${task}" failed (${currentTaskRetry}/${maxRetries}). Retry with fresh context.\n`);
     }
   }
 
@@ -195,9 +196,9 @@ export default async function validateCommand(args) {
       // If all tasks in feature done, mark feature passing
       if (feat.tasks.every(tk => tk.status === 'complete')) {
         feat.passes = true;
-        process.stdout.write(`\n  ✓ Feature "${feat.name}" complete. All tasks done.\n`);
+        emitHuman(`\n  ✓ Feature "${feat.name}" complete. All tasks done.\n`);
       } else {
-        process.stdout.write(`\n  ✓ Task "${task}" complete.\n`);
+        emitHuman(`\n  ✓ Task "${task}" complete.\n`);
       }
       saveFeatureList(targetDir, fl);
     }
@@ -210,7 +211,7 @@ export default async function validateCommand(args) {
     // runPhase prints the instructions to stdout
     const nextResult = await runPhase(targetDir, phase, { json: false });
     if (nextResult.status === 'complete') {
-      process.stdout.write(`\n  ✓ ${phaseLabel(phase)}: all features complete.\n`);
+      emitHuman(`\n  ✓ ${phaseLabel(phase)}: all features complete.\n`);
     }
   }
 
@@ -218,10 +219,10 @@ export default async function validateCommand(args) {
   if (result.overall && !feature && !task) {
     const { config: postConfig } = loadConfig(targetDir);
     if (postConfig.mode === 'autopilot') {
-      process.stdout.write(`\n  ● Autopilot: phase complete. Advancing pipeline...\n`);
+      emitHuman(`\n  ● Autopilot: phase complete. Advancing pipeline...\n`);
       const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
       if (pipelineResult.status === 'complete') {
-        process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+        emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
       }
       // Render updated dashboard showing new current phase
       renderDashboard(targetDir);

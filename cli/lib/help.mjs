@@ -17,6 +17,8 @@ State commands:
   config set <key> <val> Set config value (e.g. config set gates.enabled true)
   pause                 Pause autopilot execution
   resume                Resume autopilot execution
+  run                   Start orchestrator (spawn agent per task, autopilot)
+  select-tool           Choose backend agentic tool (interactive wizard)
   learn <message>       Append a lesson to progress.md
 
 Agent workflow commands:
@@ -53,7 +55,7 @@ Exit codes:
   2  Usage error (bad arguments)
   3  Internal error`;
 
-const VERSION = '1.2.0';
+const VERSION = '2.2.0';
 
 // Help text for JSON output
 function buildJsonHelp() {
@@ -66,6 +68,8 @@ function buildJsonHelp() {
       status: 'Show current phase + gate state + detected stack',
       phase: 'Invoke a phase (define|plan|build|verify|simplify|review|ship)',
       validate: 'Run gate checks for current phase (--feature --task for per-task check)',
+      run: 'Start orchestrator — spawn agent per task with fresh session, API retry, live dashboard',
+      'select-tool': 'Choose backend agentic tool (interactive wizard or direct selection)',
       'set-mode': 'Switch mode (copilot|autopilot)',
       config: 'Get/set config values',
       pause: 'Pause autopilot execution',
@@ -224,6 +228,42 @@ unless --force is given.`,
 Scan the project for agent-tool files (CLAUDE.md, .cursorrules, AGENTS.md, etc.)
 and report which coding agents are available. Recommends a tool based on config
 and detected files.`,
+
+  run: `Usage: dev-harness run [--agent-tool <tool>] [--target <dir>] [--json] [--no-tui]
+
+Start the orchestrator (supervisor) for autonomous pipeline execution.
+Spawns the configured agentic tool per task with a fresh session, monitors
+for completion, handles API downtime with exponential backoff, and auto-
+advances through the pipeline. Renders a live dashboard showing progress.
+
+Tier-1 tools (spawnable): hermes, openclaw, claude-code
+Tier-2 tools (IDE): cursor, copilot, windsurf, etc. — use manual workflow
+
+Flags:
+  --agent-tool <tool>  Override configured tool for this run
+  --no-tui             Disable TUI, use text output
+  --json               JSON output mode
+
+Keyboard (TUI mode):
+  p = pause   r = resume   q = quit   Ctrl+C = safe exit`,
+
+  'select-tool': `Usage: dev-harness select-tool [tool-name] [--list] [--target <dir>] [--json]
+
+Choose backend agentic tool. Interactive wizard by default, or direct
+selection with a tool name argument.
+
+Tier-1 (spawnable, deep integration):
+  hermes        TUI agent with skill manifests
+  openclaw      TUI agent, reads AGENTS.md
+  claude-code   Anthropic CLI with --print mode
+
+Tier-2 (instruction-based, IDE tools):
+  cursor, copilot, windsurf, gemini, cline, roo, kilo-code,
+  amazon-q, codex, aider, continue, opencode
+
+Flags:
+  --list    List all available tools with installation status
+  --json    JSON output (non-interactive)`,
 
   help: `Usage: dev-harness help
 

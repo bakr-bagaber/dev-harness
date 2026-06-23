@@ -30,7 +30,8 @@ dev-harness config get
 |-----|------|---------|-------------|
 | `mode` | enum | `copilot` | Execution mode: `copilot` (manual phase runs) or `autopilot` (auto-advance after gates pass) |
 | `paused` | boolean | `false` | Autopilot pause state. Set via `dev-harness pause` / `dev-harness resume` |
-| `maxRetries` | integer | `3` | Max retry attempts per phase before escalating to human |
+| `maxRetries` | integer | `10` | Max retry attempts per task before escalating to human |
+| `taskRetryCount` | integer | `0` | Per-task retry counter (managed automatically — reset on success, incremented on failure) |
 
 **Examples:**
 ```bash
@@ -133,7 +134,8 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 | Key | Type | Description |
 |-----|------|-------------|
 | `currentPhase` | string | Current pipeline phase |
-| `retryCount` | integer | Retry count for active phase |
+| `retryCount` | integer | Phase-level retry count |
+| `taskRetryCount` | integer | Per-task retry count (reset on task success) |
 | `pipelineIteration` | integer | Pipeline completion count |
 | `gateHistory` | array | Gate pass/fail history |
 | `features.remaining` | integer | Incomplete features count |
@@ -143,6 +145,25 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 | `git.clean` | boolean | Working tree clean (auto-detected) |
 | `git.hasUpstream` | boolean | Upstream tracking (auto-detected) |
 | `git.lastCommitMessage` | string | Last commit message (auto-detected) |
+
+### Supervisor (Orchestrator)
+
+Controls the `dev-harness run` orchestrator behavior — spawning agents per task,
+API downtime resilience, and heartbeat monitoring.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `supervisor.enabled` | boolean | `false` | Whether orchestrator mode is active |
+| `supervisor.apiRetries` | integer | `5` | Max API retry attempts before pausing pipeline |
+| `supervisor.backoffMs` | integer | `60000` | Base backoff delay in ms (exponential: 60s, 120s, 240s...) |
+| `supervisor.lastHeartbeat` | string\|null | `null` | Last heartbeat timestamp (ISO 8601) |
+| `supervisor.status` | enum | `idle` | Supervisor state: `idle`, `running`, `stalled`, `dead` |
+
+**Examples:**
+```bash
+dev-harness config set supervisor.apiRetries 10
+dev-harness config set supervisor.backoffMs 30000
+```
 
 ## Full Example Config
 
@@ -181,10 +202,18 @@ These fields are managed by the harness automatically. **Do not edit manually.**
       "simplifier": "Relentless about clarity. Delete more than you add."
     }
   },
-  "maxRetries": 3,
+  "maxRetries": 10,
   "retryCount": 0,
+  "taskRetryCount": 0,
   "pipelineIteration": 0,
-  "gateHistory": []
+  "gateHistory": [],
+  "supervisor": {
+    "enabled": false,
+    "apiRetries": 5,
+    "backoffMs": 60000,
+    "lastHeartbeat": null,
+    "status": "idle"
+  }
 }
 ```
 

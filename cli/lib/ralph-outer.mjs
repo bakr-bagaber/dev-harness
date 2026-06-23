@@ -28,9 +28,9 @@ import { execGit } from './git.mjs';
  * @param {object} [options]
  * @param {boolean} [options.json] — JSON output mode
  * @param {boolean} [options.verbose] — print detailed output
- * @returns {{ ok: boolean, status: string, message: string, currentPhase: string|null, phasesRemaining: number }}
+ * @returns {Promise<{ ok: boolean, status: string, message: string, currentPhase: string|null, phasesRemaining: number }>}
  */
-export function continuePipeline(targetDir, completedPhase, options = {}) {
+export async function continuePipeline(targetDir, completedPhase, options = {}) {
   const { json = false, verbose = false } = options;
 
   const { config, ok } = loadConfig(targetDir);
@@ -81,7 +81,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
     }
     // Git auto-tag if enabled
     if (config.git?.autoTag) {
-      autoTag(targetDir, completedPhase, json);
+      await autoTag(targetDir, completedPhase, json);
     }
     return {
       ok: true,
@@ -147,7 +147,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
   }
 
   // Transition to next phase
-  const transResult = transitionPhase(targetDir, nextPhase);
+  const transResult = await transitionPhase(targetDir, nextPhase);
   if (!transResult.ok) {
     return {
       ok: false,
@@ -159,7 +159,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
   }
 
   // Run inner loop for next phase
-  const loopResult = runPhase(targetDir, nextPhase, { json });
+  const loopResult = await runPhase(targetDir, nextPhase, { json });
 
   if (loopResult.status === 'escalated') {
     // Retries exhausted — stop pipeline, escalate to human
@@ -183,7 +183,7 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
     if (verbose && !json) {
       process.stdout.write(`  ✓ ${nextPhase.toUpperCase()} complete.\n`);
     }
-    return continuePipeline(targetDir, nextPhase, options);
+    return await continuePipeline(targetDir, nextPhase, options);
   }
 
   // Phase returned instruction or error — stop chain
@@ -209,9 +209,9 @@ export function continuePipeline(targetDir, completedPhase, options = {}) {
  *
  * @param {string} targetDir
  * @param {object} [options]
- * @returns {{ ok: boolean, status: string, message: string }}
+ * @returns {Promise<{ ok: boolean, status: string, message: string }>}
  */
-export function runAutopilot(targetDir, options = {}) {
+export async function runAutopilot(targetDir, options = {}) {
   const { config, ok } = loadConfig(targetDir);
   if (!ok) {
     return { ok: false, status: 'error', message: 'Cannot load config' };
@@ -226,22 +226,22 @@ export function runAutopilot(targetDir, options = {}) {
     if (!firstPhase) {
       return { ok: false, status: 'error', message: 'No phases enabled in config' };
     }
-    const transResult = transitionPhase(targetDir, firstPhase);
+    const transResult = await transitionPhase(targetDir, firstPhase);
     if (!transResult.ok) {
       return { ok: false, status: 'error', message: transResult.error || 'Transition failed' };
     }
-    return continuePipeline(targetDir, firstPhase, options);
+    return await continuePipeline(targetDir, firstPhase, options);
   }
 
   // Already in a phase — continue from here
-  return continuePipeline(targetDir, currentPhase, options);
+  return await continuePipeline(targetDir, currentPhase, options);
 }
 
 /** Create a git tag for pipeline iteration. */
-function autoTag(targetDir, phase, json) {
+async function autoTag(targetDir, phase, json) {
   const now = new Date();
   const tag = `pipeline-${now.toISOString().slice(0, 10)}-${now.getTime().toString(36)}`;
-  const r = execGit(`git tag "${tag}"`, targetDir);
+  const r = await execGit(`git tag "${tag}"`, targetDir);
   if (r.ok && !json) {
     process.stdout.write(`  ● Git tag: ${tag}\n`);
   }

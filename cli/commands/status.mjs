@@ -12,6 +12,8 @@ import { loadConfig } from '../lib/state.mjs';
 import { readLessons } from '../lib/progress.mjs';
 import { loadFeatureList, getNextFeature } from '../lib/ralph-inner.mjs';
 import { runChecks, areGatesEnabled } from '../lib/gates.mjs';
+import { renderDashboard } from '../lib/dashboard.mjs';
+import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function statusCommand(args) {
   const rawTarget = args.flags?.target;
@@ -45,7 +47,7 @@ export default async function statusCommand(args) {
   let checksPassing = 0;
   let checksTotal = 0;
   if (phase && areGatesEnabled(targetDir)) {
-    const gateResult = runChecks(targetDir, phase);
+    const gateResult = await runChecks(targetDir, phase);
     checksTotal = gateResult.checks.length;
     checksPassing = gateResult.checks.filter(c => c.pass).length;
     gateStatus = gateResult.overall ? 'pass' : 'fail';
@@ -56,7 +58,7 @@ export default async function statusCommand(args) {
   const recentLessons = allLessons.slice(-3);
 
   if (json) {
-    process.stdout.write(JSON.stringify({
+    emitJson({
       command: 'status',
       status: 'ok',
       message: configOk
@@ -78,11 +80,14 @@ export default async function statusCommand(args) {
       recentLessons: recentLessons.map(l => ({ date: l.date, author: l.author, text: l.text })),
       schemaErrors,
       nextAction: determineNextAction(targetDir, configOk, config, phase, gateStatus),
-    }) + '\n');
+    });
     return;
   }
 
   // ── Human-readable output ─────────────────────────────────────────────
+  // Render dashboard first (phases + features + tasks with checkmarks)
+  renderDashboard(targetDir);
+
   let out = '';
   out += '═══ harness Status ═══\n';
   out += line('Project:', basename(targetDir)) + '\n';
@@ -129,7 +134,7 @@ export default async function statusCommand(args) {
   // Next action
   out += '  ' + determineNextAction(targetDir, configOk, config, phase, gateStatus) + '\n';
 
-  process.stdout.write(out);
+  emitHuman(out);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

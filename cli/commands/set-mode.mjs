@@ -10,7 +10,7 @@ import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { set, loadConfig, getPhaseOrder } from '../lib/state.mjs';
 import { ensureCopilotConfig } from '../lib/modes.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';
-import { emitJson, emitHuman, emitHumanError } from '../lib/output.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 export default async function setModeCommand(args) {
   const { json, targetDir, subcommand: mode } = parseCommandArgs(args);
@@ -64,12 +64,14 @@ export default async function setModeCommand(args) {
         ? `Mode set to "${mode}"`
         : (result.error || 'Failed to set mode'),
     });
+    if (!result.ok) { process.exit(EXIT.VALIDATION_FAILURE); }
     return;
   }
 
   if (result.ok) {
     emitHuman(`✓ Mode set to "${mode}"\n`);
   } else {
-    emitHumanError(`✗ ${result.error}\n`);
+    emitCmdError({ command: 'set-mode', json, message: result.error || 'Failed to set mode' });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 }

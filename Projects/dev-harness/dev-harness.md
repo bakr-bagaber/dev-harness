@@ -2,13 +2,13 @@
 tags: [project, harness-engineering, dev-harness, agentic-loop, architecture]
 aliases: [harness, dev-harness]
 date: 2026-06-16
-modified: 2026-06-16
+modified: 2026-06-23
 ---
 
 # dev-harness
 
 **Template:** A — Software Engineering (SWE)
-**Status:** Research / Architecture Design
+**Status:** Shipped — v2.2.0 (published to npm as `dev-harness-cli`)
 **Owner:** Bakr
 
 ## Overview
@@ -41,6 +41,9 @@ Produce a comprehensive architecture and phased implementation plan for a harnes
 ## Related Docs
 
 - [[docs/analysis/harness-architecture-plan|Architecture & Implementation Plan]]
+- [README](README.md) — full feature list, CLI reference, architecture diagrams
+- [history/changelog](history/changelog.md) — release history (v2.0.0 → v2.1.0 → v2.2.0)
+- [history/decisions](history/decisions.md) — ADRs (dependency adoption, result-object boundary)
 - [[../../Infra/.hermes/skills/software-development/agent-skills-workflow|Agent Skills Workflow]]
 
 ## References

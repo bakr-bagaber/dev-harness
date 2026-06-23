@@ -516,14 +516,14 @@ dev-harness config list
 
 | Group | Parameters | Description |
 |-------|-----------|-------------|
-| ⚡ **Execution** | `maxRetries`, `commandTimeout`, `coverageTimeout`, `maxNegotiationRounds`, `escalationTimeout` | Runtime behavior tuning |
+| ⚡ **Execution** | `mode`, `paused`, `maxRetries`, `taskRetryCount` | Runtime behavior + retry state |
 | 🏗️ **Stack** | `stack`, `stackMeta` | Language/platform configuration |
 | 🧰 **Agent Tool** | `agentTool` | Current agent tool selection |
-| 🚧 **Gates** | `gates.enabled`, `gates.required`, `gates.coverageThreshold` | Gate validation settings |
-| 🌿 **Git** | `git.autoCommit`, `git.autoPush`, `git.mainBranch`, `git.tagPrefix` | Git integration behavior |
-| 🚦 **Phases** | `phases.order`, `phases.skip`, `phases.simplifyAfter` | Pipeline phase configuration |
-| 🎭 **Agent Tones** | `tones.planner`, `tones.generator`, `tones.evaluator`, `tones.simplifier` | Persona instruction customization |
-| 💾 **Runtime State** | `currentPhase`, `retryCount`, `mode`, `paused` | Live pipeline state |
+| 🚧 **Gates** | `gates.enabled`, `gates.checks`, `gates.coverage.enabled`, `gates.coverage.threshold` | Gate validation settings |
+| 🌿 **Git** | `git.autoCommit`, `git.autoTag`, `git.resetOnRetry` | Git integration behavior |
+| 🚦 **Phases** | `phases.enabled` | Pipeline phase configuration |
+| 🎭 **Agent Tones** | `agents.tone.planner`, `agents.tone.generator`, `agents.tone.evaluator`, `agents.tone.simplifier` | Persona instruction customization |
+| 💾 **Runtime State** | `currentPhase`, `retryCount`, `pipelineIteration`, `gateHistory`, `features.*`, `git.branch`, `git.clean`, `git.hasUpstream`, `git.lastCommitMessage` | Live pipeline state (read-only) |
 
 </details>
 
@@ -554,16 +554,18 @@ dev-harness validate --json
 | Convention | Rule |
 |------------|------|
 | ✅ **stdout** | Always valid JSON — machine-parseable, no exceptions |
-| ❌ **stderr** | All errors, warnings, human-readable messages |
+| ❌ **stderr** | All errors (JSON errors included) — stdout stays parseable on failure |
 | **Exit codes** | `0` success, `1` validation failure, `2` usage error, `3` internal error |
 | **JSON contract** | Every response includes `command`, `status`, `message` |
+
+> **v2.2.0:** JSON errors now go to **stderr** (previously stdout), and all command handlers exit with the correct non-zero code on failure — making `--json` output reliably parseable in CI/scripting on both success and error paths.
 
 ---
 
 ## � Dependencies
 
 Dev Harness v2.1.0 moved from zero-runtime-deps to a **minimal, audited** dependency set. Each dependency was chosen for a concrete robustness, performance, or correctness win that the hand-rolled equivalent could not match. All dependencies are ubiquitous, well-maintained, and support Node 18+.
-
+> **v2.2.0** added no new dependencies — the release was an internal consolidation refactor (output/error layers, exit-code fixes, dead code removal). The dependency set below is unchanged from v2.1.0.
 | Dependency | Version | Replaces | Why |
 |------------|---------|----------|-----|
 | [`ajv`](https://github.com/ajv-validator/ajv) | ^8 | hand-rolled `validate-schema.mjs` | Full JSON Schema draft-07 support (`$ref`, `format`, `oneOf`, `if/then/else`, `pattern`) — the previous validator silently passed configs using unsupported keywords |

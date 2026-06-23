@@ -29,8 +29,8 @@ function getStackLabel(targetDir) {
 // ── Individual check functions ───────────────────────────────────────────────
 // Each takes (targetDir) and returns { name, pass, detail }
 
-function checkGitRepo(targetDir) {
-  const { exitCode, out } = execCheck('git rev-parse --git-dir 2>/dev/null', targetDir);
+async function checkGitRepo(targetDir) {
+  const { exitCode, out } = await execCheck('git rev-parse --git-dir 2>/dev/null', targetDir);
   return {
     name: 'git-repo',
     pass: exitCode === 0,
@@ -48,7 +48,7 @@ function checkConfigExists(targetDir) {
   };
 }
 
-function checkInitExecutable(targetDir) {
+async function checkInitExecutable(targetDir) {
   // init.sh is now at harness/scripts/init.sh
   const initSh = resolve(HARNESS_DIR(targetDir), 'scripts', 'init.sh');
   // Windows has no POSIX executable bit — skip the exec-bit check there.
@@ -60,7 +60,7 @@ function checkInitExecutable(targetDir) {
     };
   }
   try {
-    const { exitCode } = execCheck(`test -x "${initSh}"`, targetDir);
+    const { exitCode } = await execCheck(`test -x "${initSh}"`, targetDir);
     return {
       name: 'init-executable',
       pass: exitCode === 0,
@@ -71,8 +71,8 @@ function checkInitExecutable(targetDir) {
   }
 }
 
-function checkFeatureBranch(targetDir) {
-  const { out, exitCode } = execCheck('git symbolic-ref HEAD 2>/dev/null', targetDir);
+async function checkFeatureBranch(targetDir) {
+  const { out, exitCode } = await execCheck('git symbolic-ref HEAD 2>/dev/null', targetDir);
   if (exitCode !== 0) {
     return { name: 'feature-branch', pass: false, detail: 'Not on a branch (detached HEAD or no git repo)' };
   }
@@ -85,8 +85,8 @@ function checkFeatureBranch(targetDir) {
   };
 }
 
-function checkGitCleanSimple(targetDir) {
-  const { exitCode } = execCheck('git diff --quiet 2>/dev/null', targetDir);
+async function checkGitCleanSimple(targetDir) {
+  const { exitCode } = await execCheck('git diff --quiet 2>/dev/null', targetDir);
   if (exitCode !== 0) {
     // There are uncommitted changes
     return { name: 'git-clean', pass: false, detail: 'Uncommitted changes (git diff --quiet failed)' };
@@ -94,8 +94,8 @@ function checkGitCleanSimple(targetDir) {
   return { name: 'git-clean', pass: true, detail: 'Working tree clean' };
 }
 
-function checkGitStatusClean(targetDir) {
-  const { out, exitCode } = execCheck('git status --porcelain 2>/dev/null', targetDir);
+async function checkGitStatusClean(targetDir) {
+  const { out, exitCode } = await execCheck('git status --porcelain 2>/dev/null', targetDir);
   if (exitCode !== 0) {
     return { name: 'git-clean', pass: false, detail: 'Unable to check git status' };
   }
@@ -107,14 +107,14 @@ function checkGitStatusClean(targetDir) {
   };
 }
 
-function checkLint(targetDir) {
+async function checkLint(targetDir) {
   const stack = getStackLabel(targetDir);
   const meta = getStackMeta(stack, targetDir);
   const lintCmd = meta?.lintCmd;
   if (!lintCmd) {
     return { name: 'lint', pass: true, detail: `No lint command configured for ${stack}` };
   }
-  const { exitCode, out } = execCheck(lintCmd, targetDir);
+  const { exitCode, out } = await execCheck(lintCmd, targetDir);
   return {
     name: 'lint',
     pass: exitCode === 0,
@@ -122,14 +122,14 @@ function checkLint(targetDir) {
   };
 }
 
-function checkTests(targetDir) {
+async function checkTests(targetDir) {
   const stack = getStackLabel(targetDir);
   const meta = getStackMeta(stack, targetDir);
   const testCmd = meta?.testCmd;
   if (!testCmd) {
     return { name: 'tests', pass: true, detail: `No test command configured for ${stack}` };
   }
-  const { exitCode, out } = execCheck(testCmd, targetDir);
+  const { exitCode, out } = await execCheck(testCmd, targetDir);
   return {
     name: 'tests',
     pass: exitCode === 0,
@@ -147,8 +147,8 @@ function checkChangelog(targetDir) {
   };
 }
 
-function checkTagged(targetDir) {
-  const { out, exitCode } = execCheck('git describe --exact-match --tags HEAD 2>/dev/null', targetDir);
+async function checkTagged(targetDir) {
+  const { out, exitCode } = await execCheck('git describe --exact-match --tags HEAD 2>/dev/null', targetDir);
   return {
     name: 'tagged',
     pass: exitCode === 0,
@@ -156,8 +156,8 @@ function checkTagged(targetDir) {
   };
 }
 
-function checkBranchUpToDate(targetDir) {
-  const { exitCode } = execCheck(
+async function checkBranchUpToDate(targetDir) {
+  const { exitCode } = await execCheck(
     'git fetch origin 2>/dev/null; git merge-base --is-ancestor HEAD @{u} 2>/dev/null',
     targetDir,
   );
@@ -165,7 +165,7 @@ function checkBranchUpToDate(targetDir) {
     return { name: 'branch-up-to-date', pass: true, detail: 'Branch is up to date with upstream' };
   }
   // Check if there's an upstream at all
-  const { out: upstream } = execCheck('git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null', targetDir);
+  const { out: upstream } = await execCheck('git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null', targetDir);
   if (!upstream) {
     return { name: 'branch-up-to-date', pass: true, detail: 'No upstream configured — skipped' };
   }
@@ -456,9 +456,9 @@ export function getPhaseChecks(phase) {
  * @param {string} [options.task] — scope to a specific task
  * @returns {{ phase: string, checks: Array<{name:string,pass:boolean,detail:string}>, overall: boolean, failures: string[], feature?: string, task?: string }}
  */
-export function runChecks(targetDir, phase, options = {}) {
+export async function runChecks(targetDir, phase, options = {}) {
   const checks = getPhaseChecks(phase);
-  const results = checks.map(fn => fn(targetDir));
+  const results = await Promise.all(checks.map(fn => fn(targetDir)));
   const failures = results.filter(r => !r.pass).map(r => r.name);
   const result = {
     phase,

@@ -169,6 +169,23 @@
     "detectFiles": [],
     "coverageCmd": ""
   },
+  "flutter": {
+    "label": "Flutter",
+    "testCmd": "flutter test",
+    "lintCmd": "flutter analyze",
+    "typeCheckCmd": "dart analyze",
+    "buildCmd": "flutter build apk --debug",
+    "installCmd": "flutter pub get",
+    "versionFile": "",
+    "configFile": "pubspec.yaml",
+    "extensions": [
+      ".dart"
+    ],
+    "detectFiles": [
+      "pubspec.yaml"
+    ],
+    "coverageCmd": "flutter test --coverage"
+  },
   "java": {
     "label": "Java",
     "testCmd": "mvn test",

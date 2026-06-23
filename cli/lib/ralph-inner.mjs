@@ -146,9 +146,9 @@ export function getNextTask(feature) {
  * @param {object} [options]
  * @param {boolean} [options.json] — JSON output mode
  * @param {boolean} [options.gitOps] — opt-in: execute git reset/clean on retry (default off)
- * @returns {{ ok: boolean, status: string, message: string, phase: string, iteration: number, mode: string, details: object }}
+ * @returns {Promise<{ ok: boolean, status: string, message: string, phase: string, iteration: number, mode: string, details: object }>}
  */
-export function runPhase(targetDir, phase, options = {}) {
+export async function runPhase(targetDir, phase, options = {}) {
   const { json = false, gitOps = false } = options;
 
   // Load config
@@ -181,13 +181,27 @@ export function runPhase(targetDir, phase, options = {}) {
     };
   }
 
+  // Task-level retry check: escalate if task retries exhausted
+  const taskRetryCount = config.taskRetryCount ?? 0;
+  if (taskRetryCount >= maxRetries) {
+    return {
+      ok: false,
+      status: 'escalated',
+      message: `Task retries exhausted (${taskRetryCount}/${maxRetries}) for phase "${phase}". Escalating to human.`,
+      phase,
+      iteration: taskRetryCount,
+      mode,
+      details: { taskRetryCount, maxRetries, retryCount },
+    };
+  }
+
   // ── Opt-in git ops: fresh context on retry ──────────────────────────────
   // When --git-ops is passed AND this is a retry (retryCount > 0), execute a
   // hard reset to the last commit + clean untracked files. This gives the
   // "fresh context" Ralph requires without forcing it on agent-agnostic users.
   let gitResetPerformed = false;
   if (gitOps && retryCount > 0) {
-    const resetResult = gitHardResetClean(targetDir);
+    const resetResult = await gitHardResetClean(targetDir);
     if (resetResult.ok) {
       gitResetPerformed = true;
       if (!json) {
@@ -225,7 +239,7 @@ export function runPhase(targetDir, phase, options = {}) {
       // Feature has all tasks complete but passes=false → mark it passing
       feature.passes = true;
       saveFeatureList(targetDir, fl);
-      return runPhase(targetDir, phase, options); // Recurse to get next feature
+      return await runPhase(targetDir, phase, options); // Recurse to get next feature
     }
 
     const output = buildFeatureIterateOutput(phase, feature, task, mode, maxRetries, resetOnRetry, autoCommit);

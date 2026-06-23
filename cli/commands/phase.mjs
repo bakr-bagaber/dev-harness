@@ -14,6 +14,8 @@ import { runPhase, getPhaseType } from '../lib/ralph-inner.mjs';
 import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { promptYesNo, shouldConfirmGates, shouldAutoPrompt } from '../lib/modes.mjs';
 import { parseCommandArgs, phaseLabel } from '../lib/command-helpers.mjs';
+import { renderDashboard } from '../lib/dashboard.mjs';
+import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function phaseCommand(args) {
   const { json, targetDir, gitOps } = parseCommandArgs(args);
@@ -53,22 +55,22 @@ export default async function phaseCommand(args) {
   if (preOk && preConfig.paused && preMode === 'autopilot') {
     const msg = 'Pipeline is paused. Run: dev-harness resume';
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'phase',
         phase,
         status: 'paused',
         message: msg,
         currentPhase: preConfig.currentPhase,
         mode: preMode,
-      }) + '\n');
+      });
     } else {
-      process.stdout.write(`  ⏸ ${msg}\n`);
+      emitHuman(`  ⏸ ${msg}\n`);
     }
     return;
   }
 
   // Attempt phase transition
-  const transitionResult = transitionPhase(targetDir, phase);
+  const transitionResult = await transitionPhase(targetDir, phase);
 
   if (!transitionResult.ok) {
     die(
@@ -81,8 +83,11 @@ export default async function phaseCommand(args) {
   const mode = transitionResult.config?.mode ?? 'copilot';
   const phaseType = getPhaseType(phase);
 
+  // Render dashboard showing current pipeline state
+  renderDashboard(targetDir, { json });
+
   // Run the inner loop for this phase
-  const loopResult = runPhase(targetDir, phase, { json, gitOps });
+  const loopResult = await runPhase(targetDir, phase, { json, gitOps });
 
   if (!loopResult.ok) {
     die(
@@ -117,7 +122,7 @@ export default async function phaseCommand(args) {
 
     // In autopilot mode with complete status — continue pipeline
     if (mode === 'autopilot' && loopResult.status === 'complete') {
-      const pipelineResult = continuePipeline(targetDir, phase, { json, verbose: false });
+      const pipelineResult = await continuePipeline(targetDir, phase, { json, verbose: false });
       out.pipeline = {
         status: pipelineResult.status,
         message: pipelineResult.message,
@@ -126,25 +131,25 @@ export default async function phaseCommand(args) {
       };
     }
 
-    process.stdout.write(JSON.stringify(out) + '\n');
+    emitJson(out);
     return;
   }
 
   // ── Human output ────────────────────────────────────────────────────
   if (loopResult.status === 'complete') {
-    process.stdout.write(`\n${phaseLabel(phase)} phase complete.\n`);
+    emitHuman(`\n${phaseLabel(phase)} phase complete.\n`);
 
     if (mode === 'autopilot') {
       // Autopilot: continue pipeline automatically
-      const pipelineResult = continuePipeline(targetDir, phase, { json: false, verbose: true });
+      const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
       if (pipelineResult.status === 'complete') {
-        process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+        emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
       } else if (pipelineResult.status === 'instruction') {
-        process.stdout.write(`\nNext: dev-harness phase ${pipelineResult.nextPhase}\n`);
+        emitHuman(`\nNext: dev-harness phase ${pipelineResult.nextPhase}\n`);
       }
     } else if (nextPhase) {
       // Copilot: print next step
-      process.stdout.write(`Next: dev-harness phase ${nextPhase}\n`);
+      emitHuman(`Next: dev-harness phase ${nextPhase}\n`);
       // Auto-prompt: controlled by two independent flags:
       //   autoPrompt=true  → show the prompt
       //   confirmGates=true → require y/n answer before continuing
@@ -152,31 +157,31 @@ export default async function phaseCommand(args) {
         if (shouldConfirmGates(targetDir)) {
           const answer = await promptYesNo(`Advance to ${nextPhase.toUpperCase()}?`);
           if (answer === true) {
-            process.stdout.write(`\n  ● Advancing to "${nextPhase}"...\n`);
-            const pipelineResult = continuePipeline(targetDir, phase, { json: false, verbose: true });
+            emitHuman(`\n  ● Advancing to "${nextPhase}"...\n`);
+            const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
             if (pipelineResult.status === 'complete') {
-              process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+              emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
             }
           } else if (answer === false) {
-            process.stdout.write(`  Staying in ${phase.toUpperCase()}. Run: dev-harness phase ${nextPhase} when ready.\n`);
+            emitHuman(`  Staying in ${phase.toUpperCase()}. Run: dev-harness phase ${nextPhase} when ready.\n`);
           }
           // null = no TTY, skipped
         } else {
           // confirmGates disabled — auto-advance without waiting for input
-          process.stdout.write(`  ● Auto-advancing to "${nextPhase}"...\n`);
-          const pipelineResult = continuePipeline(targetDir, phase, { json: false, verbose: true });
+          emitHuman(`  ● Auto-advancing to "${nextPhase}"...\n`);
+          const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
           if (pipelineResult.status === 'complete') {
-            process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+            emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
           }
         }
       }
     } else {
-      process.stdout.write('Pipeline complete.\n');
+      emitHuman('Pipeline complete.\n');
     }
   } else if (loopResult.status === 'instruction') {
     // runPhase already printed the task instructions
     if (mode === 'autopilot' && nextPhase) {
-      process.stdout.write(`After gate passes, autopilot will continue to "${nextPhase}".\n`);
+      emitHuman(`After gate passes, autopilot will continue to "${nextPhase}".\n`);
     }
   }
 }

@@ -1,5 +1,31 @@
 # Decisions — dev-harness
 
+## 2026-06-23 — ADR: Result-object boundary formalized (v2.2.0)
+
+- **Agent:** GitHub Copilot
+- **Type:** architectural decision
+- **Context:** The v2.0.0→v2.1.0 migration left two parallel output strategies (output.mjs helpers vs raw process.stdout.write) and two parallel error strategies (errors.mjs throw-based vs { ok, error } result objects) coexisting without a documented boundary. 9 command handlers emitted errors but returned (exit 0 on failure), breaking --json scripting/CI. errors.mjs was a near-leaf module that almost nothing imported.
+
+**Decision:** Formalize the boundary:
+- **lib modules** return `{ ok, error, ... }` result objects (never throw).
+- **command handlers** translate results to output via output.mjs (`emitJson`/`emitHuman`/`emitCmdError`/`emitResult`), and throw `CliError`/`ValidationError` only for usage/fatal errors.
+- **errors.mjs** (`CliError`/`die`) is used at the CLI entry boundary (`dev-harness.mjs` top-level catch) to format and exit on thrown errors.
+- **output.mjs** is the single emit layer for all CLI output. JSON errors go to stderr (stdout stays parseable).
+
+**Alternatives considered:**
+- **Migrate lib modules to throw-based** — rejected: the result-object pattern is deeply embedded across 30+ lib modules with consistent `{ ok, error, ... }` shapes. Throwing would require rewriting every caller and risks altering tested semantics.
+- **Remove errors.mjs entirely** — rejected: the CLI entry point needs `CliError`/`die` for usage errors and the top-level catch. Scoping it to the boundary (rather than removing) is the right granularity.
+
+**Impact:**
+- 16 command handlers migrated to shared output helpers.
+- 9 handlers fixed for correct non-zero exit codes on failure.
+- errors.mjs header now documents the boundary explicitly.
+- output.mjs extended with `emitCmdError` and `emitResult` helpers.
+
+**Verification:** `npm test` (26/26), `npm run lint` (0 errors)
+
+---
+
 ## 2026-06-21 — ADR: Drop zero-runtime-dependency guarantee (v2.1.0)
 
 - **Agent:** GitHub Copilot

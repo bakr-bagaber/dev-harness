@@ -19,8 +19,33 @@ dev-harness detect-tool --target my-project
 
 ## How It Works
 
-The harness emits **generic phase instructions** via stdout. Any agent that
-can read text output and run shell commands can follow them:
+dev-harness supports two integration models depending on tool type:
+
+### Tier 1 — Orchestrator Mode (Spawnable Tools)
+
+For CLI/TUI tools (Hermes, OpenClaw, Claude Code), dev-harness can **spawn the agent
+per task** with a fresh session, monitor for completion, handle API downtime, and
+auto-advance through the pipeline:
+
+```bash
+# Select your backend tool (interactive wizard)
+dev-harness select-tool
+
+# Start the orchestrator — spawns agent per task, live dashboard
+dev-harness run --agent-tool hermes
+```
+
+Each task gets:
+- **Fresh session** — no continuous session (Ralph pattern requirement)
+- **Task prompt** — written to `harness/current-task.md`, passed to agent
+- **Automatic validation** — gates run after agent exits
+- **API resilience** — exponential backoff on API errors (60s, 120s, 240s...)
+- **Live dashboard** — phases/features/tasks with checkmarks + agent output
+
+### Tier 2 — Instruction Mode (IDE Tools)
+
+For IDE extensions (Cursor, Copilot, Windsurf, etc.), dev-harness emits **generic
+phase instructions** via stdout. The agent reads its config file and follows them:
 
 1. Agent reads `AGENTS.md` (or tool-specific file like `CLAUDE.md`)
 2. User runs `dev-harness phase <name>` — CLI prints instructions for the agent
@@ -31,7 +56,20 @@ No tool-specific protocol is needed — the contract is text in, text out.
 
 ## Supported Tools (18 tools)
 
-### Tools with a specific rules file (generated from AGENTS.md content)
+### Tier 1 — Deep Integration (Spawnable, Orchestrator Mode)
+
+These tools support `dev-harness run` for autonomous pipeline execution with
+fresh sessions, API retry, and live dashboard.
+
+| Tool | Flag | Spawn Command | Notes |
+|------|------|---------------|-------|
+| **Hermes** | `--agent-tool hermes` | `hermes --task <file> --fresh-session --exit-on-complete` | Full adapter with SKILL.md + spawn.mjs |
+| **OpenClaw** | `--agent-tool openclaw` | `openclaw --non-interactive --exit-on-complete` | Reads AGENTS.md, task via stdin |
+| **Claude Code** | `--agent-tool claude-code` | `claude -p --dangerously-skip-permissions <prompt>` | Non-interactive print mode |
+
+### Tier 2 — Instruction-Based (IDE Tools, Manual Workflow)
+
+#### Tools with a specific rules file (generated from AGENTS.md content)
 
 | Tool | Flag | File | Notes |
 |------|------|------|-------|
@@ -67,7 +105,7 @@ No tool-specific protocol is needed — the contract is text in, text out.
 
 | Tool | Flag | Notes |
 |------|------|-------|
-| **Hermes** | `--agent-tool hermes` | Uses SKILL.md + wrapper scripts in `adapters/hermes/` |
+| **Hermes** | `--agent-tool hermes` | Uses SKILL.md + wrapper scripts + spawn.mjs in `adapters/hermes/` |
 
 ### Per-tool examples
 
@@ -103,18 +141,74 @@ Each tool has an adapter directory under `adapters/`:
 
 ```
 adapters/
-├── hermes/              — SKILL.md + wrapper scripts + templates symlink
-├── claude-code/         — CLAUDE.md.template + README
+├── hermes/              — SKILL.md + wrapper scripts + spawn.mjs + templates
+├── openclaw/            — README + spawn.mjs (reads AGENTS.md natively)
+├── claude-code/         — README + spawn.mjs (CLAUDE.md template)
 ├── cursor/              — .cursorrules.template + README
 ├── codex/               — README (reads AGENTS.md natively)
 └── generic/             — README (default, AGENTS.md only)
 ```
 
-Adapters are **template files + documentation**, not plugins. The CLI core
+**Tier-1 adapters** include a `spawn.mjs` module that implements the spawn interface:
+- `spawnAgent({ taskPrompt, taskFile, targetDir })` — start a fresh agent process
+- `detectCompletion(proc)` — return 'success' | 'failure' | 'api-error' | 'running'
+- `killAgent(proc)` — gracefully terminate
+- `isAvailable()` — check if tool CLI is installed
+
+**Tier-2 adapters** are template files + documentation only. The CLI core
 stays tool-agnostic. `init --agent-tool <name>` renders the adapter template
 with stack variables and writes it to the target project.
 
+## Orchestrator Mode (`dev-harness run`)
+
+For Tier-1 tools, the orchestrator provides fully autonomous pipeline execution:
+
+```bash
+# Select tool first (stores in config.agentTool)
+dev-harness select-tool hermes
+
+# Start orchestrator — spawns Hermes per task, live TUI dashboard
+dev-harness run
+
+# Or override tool for this run only
+dev-harness run --agent-tool claude-code
+```
+
+### What the Orchestrator Does
+
+1. Reads current pipeline state (phase, feature, task)
+2. Builds task prompt → writes to `harness/current-task.md`
+3. Spawns agent with fresh session (per tool's spawn adapter)
+4. Monitors process: success → validate; failure → retry; API error → backoff
+5. On validation pass: marks task complete, advances to next task
+6. On validation fail: increments `taskRetryCount`, retries (up to `maxRetries`)
+7. Renders live dashboard on every transition
+8. Graceful shutdown on Ctrl+C (pauses pipeline, saves state)
+
+### API Downtime Resilience
+
+When the agent's API goes down (connection refused, timeout, rate limit, 503):
+- Exponential backoff: 60s → 120s → 240s → 480s → 960s
+- Up to `supervisor.apiRetries` attempts (default 5)
+- After exhaustion: pauses pipeline, notifies human
+- Resume with `dev-harness resume` when API recovers
+
+### Backend Tool Selection
+
+```bash
+# Interactive wizard — shows installed tools with capabilities
+dev-harness select-tool
+
+# List all tools
+select-tool --list
+
+# Direct selection
+select-tool hermes
+```
+
 ## Adding a New Tool
+
+### Tier 2 (Instruction-Based)
 
 1. Add an entry to `TOOL_REGISTRY` in `cli/lib/tool-registry.mjs`:
    ```javascript
@@ -131,7 +225,24 @@ with stack variables and writes it to the target project.
 4. If the tool has special needs (wrapper scripts, manifest), mark `special: true`
    and create the full adapter directory
 
-That's it — `init --agent-tool new-tool` and `detect-tool` will work automatically.
+### Tier 1 (Spawnable)
+
+In addition to the Tier 2 steps:
+
+5. Create `adapters/<tool-name>/spawn.mjs` implementing the spawn interface:
+   ```javascript
+   export async function spawnAgent({ taskPrompt, taskFile, targetDir, streamOutput }) {
+     // Spawn the tool's CLI with a fresh session
+     // Return { process }
+   }
+   export function detectCompletion(proc) { ... }
+   export function killAgent(proc) { ... }
+   export function isAvailable() { ... }
+   ```
+6. Add the tool to `SPAWNABLE_TOOLS` and `ADAPTER_LOADERS` in `cli/commands/run.mjs`
+7. Add the tool to `TIER1_TOOLS` in `cli/commands/select-tool.mjs`
+
+That's it — `init --agent-tool new-tool`, `select-tool`, and `run` will work automatically.
 
 ## detect-tool Command
 

@@ -574,7 +574,7 @@ await run('CLI-2.2 — validate init phase human output', async () => {
   initGitRepo(dir);
   const out = cli('validate', { cwd: dir });
   assertMatch(out.stdout, /INIT Gate: PASS/i);
-  assert(out.stdout.includes('✅'), 'should use checkmark');
+  assert(out.stdout.includes('✓'), 'should use checkmark');
   assertEqual(out.exitCode, 0, 'exit code should be 0');
 });
 

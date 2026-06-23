@@ -12,6 +12,7 @@
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { proposeContract, reviewContract, getContractStatus, escalateContract } from '../lib/contract.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 const SUBCOMMANDS = ['propose', 'review', 'status', 'escalate'];
 
@@ -43,19 +44,20 @@ export default async function contractCommand(args) {
     const result = proposeContract(targetDir, { scope, exclusions, criteria });
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'contract',
         subcommand: 'propose',
         status: result.ok ? 'ok' : 'error',
         message: result.ok ? 'Contract proposed. Evaluator review needed.' : result.error,
-      }) + '\n');
+      });
       return;
     }
 
     if (result.ok) {
-      process.stdout.write('✓ Contract proposed. Run: dev-harness contract review\n');
+      emitHuman('✓ Contract proposed. Run: dev-harness contract review\n');
     } else {
-      process.stderr.write(`✗ ${result.error}\n`);
+      emitCmdError({ command: 'contract', subcommand: 'propose', json, message: result.error });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
     return;
   }
@@ -78,7 +80,7 @@ export default async function contractCommand(args) {
     const result = reviewContract(targetDir, decision, notes);
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'contract',
         subcommand: 'review',
         status: result.ok ? 'ok' : 'error',
@@ -88,7 +90,7 @@ export default async function contractCommand(args) {
             : `Contract ${decision}.`
           : result.error,
         escalated: result.escalated,
-      }) + '\n');
+      });
       return;
     }
 
@@ -96,9 +98,10 @@ export default async function contractCommand(args) {
       const msg = result.escalated
         ? '✓ Max negotiation rounds reached. Contract escalated to human.'
         : `✓ Contract marked as "${decision}"`;
-      process.stdout.write(msg + '\n');
+      emitHuman(msg + '\n');
     } else {
-      process.stderr.write(`✗ ${result.error}\n`);
+      emitCmdError({ command: 'contract', subcommand: 'review', json, message: result.error });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
     return;
   }
@@ -108,7 +111,7 @@ export default async function contractCommand(args) {
     const { status, rounds } = getContractStatus(targetDir);
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'contract',
         subcommand: 'status',
         status: status ? 'ok' : 'error',
@@ -117,14 +120,14 @@ export default async function contractCommand(args) {
         message: status
           ? `Contract ${status} (round ${rounds}/5)`
           : 'No sprint-contract.md found. Run: dev-harness contract propose',
-      }) + '\n');
+      });
       return;
     }
 
     if (status) {
-      process.stdout.write(`Contract status: ${status} (round ${rounds}/5)\n`);
+      emitHuman(`Contract status: ${status} (round ${rounds}/5)\n`);
     } else {
-      process.stdout.write('No sprint-contract.md found. Run: dev-harness contract propose\n');
+      emitHuman('No sprint-contract.md found. Run: dev-harness contract propose\n');
     }
     return;
   }
@@ -136,19 +139,20 @@ export default async function contractCommand(args) {
     const result = escalateContract(targetDir, reason);
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'contract',
         subcommand: 'escalate',
         status: result.ok ? 'ok' : 'error',
         message: result.ok ? 'Contract escalated to human.' : result.error,
-      }) + '\n');
+      });
       return;
     }
 
     if (result.ok) {
-      process.stdout.write('✓ Contract escalated to human.\n');
+      emitHuman('✓ Contract escalated to human.\n');
     } else {
-      process.stderr.write(`✗ ${result.error}\n`);
+      emitCmdError({ command: 'contract', subcommand: 'escalate', json, message: result.error });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
     return;
   }

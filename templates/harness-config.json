@@ -35,8 +35,16 @@
       "simplifier": "Relentless about clarity. Delete more than you add."
     }
   },
-  "maxRetries": 3,
+  "maxRetries": 10,
   "retryCount": 0,
+  "taskRetryCount": 0,
   "pipelineIteration": 0,
-  "gateHistory": []
+  "gateHistory": [],
+  "supervisor": {
+    "enabled": false,
+    "apiRetries": 5,
+    "backoffMs": 60000,
+    "lastHeartbeat": null,
+    "status": "idle"
+  }
 }

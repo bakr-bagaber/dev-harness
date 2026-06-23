@@ -19,6 +19,7 @@ import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { get as stateGet, set as stateSet, loadConfig } from '../lib/state.mjs';
 import { CONFIG_PARAMS, getGroups, getParamsByGroup, getParamMeta } from '../lib/config-registry.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 export default async function configCommand(args) {
   const json = !!(args.json || args.flags?.json);
@@ -62,27 +63,27 @@ export default async function configCommand(args) {
         editable: p.editable,
         value: resolveValue(p.key),
       }));
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'config',
         subcommand: 'list',
         status: 'ok',
         message: `${params.length} configuration parameters`,
         params,
-      }, null, 2) + '\n');
+      });
       return;
     }
 
     // Human output — grouped table
-    process.stdout.write('═══ Harness Configuration ═══\n\n');
+    emitHuman('═══ Harness Configuration ═══\n\n');
     if (!ok) {
-      process.stdout.write('  No harness/config.json found. Run: dev-harness init\n\n');
+      emitHuman('  No harness/config.json found. Run: dev-harness init\n\n');
       return;
     }
 
     for (const group of getGroups()) {
       const params = getParamsByGroup(group);
       const readOnly = params[0]?.editable === false;
-      process.stdout.write(`── ${group}${readOnly ? ' (read-only)' : ''} ──\n`);
+      emitHuman(`── ${group}${readOnly ? ' (read-only)' : ''} ──\n`);
 
       // Calculate column widths
       const maxKey = Math.max(...params.map(p => p.key.length), 10);
@@ -97,13 +98,13 @@ export default async function configCommand(args) {
         const opts = p.options ? `[${p.options.filter(o => o !== null).slice(0, 4).join('|')}${p.options.length > 4 ? '|...' : ''}]` : `[${p.type}]`;
         const padKey = p.key.padEnd(maxKey);
         const padVal = valStr.padEnd(Math.min(maxVal, 20));
-        process.stdout.write(`  ${padKey}  ${padVal}  ${opts.padEnd(16)} ${p.description.slice(0, 60)}\n`);
+        emitHuman(`  ${padKey}  ${padVal}  ${opts.padEnd(16)} ${p.description.slice(0, 60)}\n`);
       }
-      process.stdout.write('\n');
+      emitHuman('\n');
     }
 
-    process.stdout.write('Edit with: dev-harness config set <key> <value>\n');
-    process.stdout.write('Full docs: docs/CONFIGURATION.md\n');
+    emitHuman('Edit with: dev-harness config set <key> <value>\n');
+    emitHuman('Full docs: docs/CONFIGURATION.md\n');
     return;
   }
 
@@ -113,26 +114,26 @@ export default async function configCommand(args) {
     const { value, ok, error } = stateGet(targetDir, key);
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'config',
         subcommand: 'get',
         key,
         value: ok ? value : null,
         status: ok ? 'ok' : 'error',
         message: ok ? null : (error || 'Unknown error'),
-      }) + '\n');
+      });
       return;
     }
 
     // Human output
     if (!ok) {
-      process.stdout.write(`Config not available: ${error}\n`);
+      emitHuman(`Config not available: ${error}\n`);
       return;
     }
     if (key === null) {
-      process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+      emitHuman(JSON.stringify(value, null, 2) + '\n');
     } else {
-      process.stdout.write(`${key} = ${JSON.stringify(value)}\n`);
+      emitHuman(`${key} = ${JSON.stringify(value)}\n`);
     }
     return;
   }
@@ -182,71 +183,41 @@ export default async function configCommand(args) {
     if (meta) {
       // Check editability
       if (!meta.editable) {
-        const msg = `"${key}" is read-only (managed by harness). Cannot set manually.`;
-        if (json) {
-          process.stdout.write(JSON.stringify({ command: 'config', subcommand: 'set', key, status: 'error', message: msg }) + '\n');
-        } else {
-          process.stderr.write(`✗ ${msg}\n`);
-        }
-        return;
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, message: `"${key}" is read-only (managed by harness). Cannot set manually.` });
+        process.exit(EXIT.VALIDATION_FAILURE);
       }
       // Check enum options
       if (meta.options && !meta.options.includes(parsedValue)) {
         const opts = meta.options.map(o => o === null ? 'null' : `"${o}"`).join(', ');
-        const msg = `Invalid value for "${key}". Allowed: ${opts}`;
-        if (json) {
-          process.stdout.write(JSON.stringify({ command: 'config', subcommand: 'set', key, value: parsedValue, status: 'error', message: msg }) + '\n');
-        } else {
-          process.stderr.write(`✗ ${msg}\n`);
-        }
-        return;
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, value: parsedValue, message: `Invalid value for "${key}". Allowed: ${opts}` });
+        process.exit(EXIT.VALIDATION_FAILURE);
       }
       // Check type for integers
       if (meta.type === 'integer' && typeof parsedValue !== 'number') {
-        const msg = `"${key}" expects an integer, got ${typeof parsedValue}`;
-        if (json) {
-          process.stdout.write(JSON.stringify({ command: 'config', subcommand: 'set', key, value: parsedValue, status: 'error', message: msg }) + '\n');
-        } else {
-          process.stderr.write(`✗ ${msg}\n`);
-        }
-        return;
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, value: parsedValue, message: `"${key}" expects an integer, got ${typeof parsedValue}` });
+        process.exit(EXIT.VALIDATION_FAILURE);
       }
       // Check type for booleans
       if (meta.type === 'boolean' && typeof parsedValue !== 'boolean') {
-        const msg = `"${key}" expects a boolean (true/false), got ${typeof parsedValue}`;
-        if (json) {
-          process.stdout.write(JSON.stringify({ command: 'config', subcommand: 'set', key, value: parsedValue, status: 'error', message: msg }) + '\n');
-        } else {
-          process.stderr.write(`✗ ${msg}\n`);
-        }
-        return;
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, value: parsedValue, message: `"${key}" expects a boolean (true/false), got ${typeof parsedValue}` });
+        process.exit(EXIT.VALIDATION_FAILURE);
       }
       // Check type for arrays
       if (meta.type === 'array' && !Array.isArray(parsedValue)) {
-        const msg = `"${key}" expects a JSON array, got ${typeof parsedValue}`;
-        if (json) {
-          process.stdout.write(JSON.stringify({ command: 'config', subcommand: 'set', key, value: parsedValue, status: 'error', message: msg }) + '\n');
-        } else {
-          process.stderr.write(`✗ ${msg}\n`);
-        }
-        return;
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, value: parsedValue, message: `"${key}" expects a JSON array, got ${typeof parsedValue}` });
+        process.exit(EXIT.VALIDATION_FAILURE);
       }
       // Check type for objects
       if (meta.type === 'object' && (typeof parsedValue !== 'object' || Array.isArray(parsedValue) || parsedValue === null)) {
-        const msg = `"${key}" expects a JSON object, got ${Array.isArray(parsedValue) ? 'array' : typeof parsedValue}`;
-        if (json) {
-          process.stdout.write(JSON.stringify({ command: 'config', subcommand: 'set', key, value: parsedValue, status: 'error', message: msg }) + '\n');
-        } else {
-          process.stderr.write(`✗ ${msg}\n`);
-        }
-        return;
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, value: parsedValue, message: `"${key}" expects a JSON object, got ${Array.isArray(parsedValue) ? 'array' : typeof parsedValue}` });
+        process.exit(EXIT.VALIDATION_FAILURE);
       }
     }
 
     const result = stateSet(targetDir, key, parsedValue);
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'config',
         subcommand: 'set',
         key,
@@ -255,14 +226,15 @@ export default async function configCommand(args) {
         message: result.ok
           ? `Set ${key} = ${JSON.stringify(parsedValue)}`
           : (result.error || 'Unknown error'),
-      }) + '\n');
+      });
       return;
     }
 
     if (result.ok) {
-      process.stdout.write(`✓ ${key} = ${JSON.stringify(parsedValue)}\n`);
+      emitHuman(`✓ ${key} = ${JSON.stringify(parsedValue)}\n`);
     } else {
-      process.stderr.write(`✗ ${result.error}\n`);
+      emitCmdError({ command: 'config', subcommand: 'set', json, key, message: result.error || 'Unknown error' });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
   }
 }

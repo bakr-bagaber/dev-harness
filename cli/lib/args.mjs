@@ -101,11 +101,3 @@ export function parseArgs(argv) {
 
   return result;
 }
-
-/**
- * Determine if stdout should be JSON based on args.
- * Mirrors the implicit promotion logic in parseArgs for external callers.
- * @param {{ json?: boolean, flags?: Record<string,any> }} args
- * @returns {boolean}
- */
-// wantsJson removed — use parseCommandArgs().json from command-helpers.mjs instead.

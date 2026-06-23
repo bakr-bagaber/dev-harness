@@ -1,41 +1,42 @@
 /**
- * validate-schema — Lightweight JSON-schema validator (no external deps).
+ * validate-schema — JSON-schema validator backed by ajv.
  *
- * Supports the subset of JSON Schema draft-07 used by this project's schemas:
- *   - type (string, number, integer, boolean, array, object, null)
- *   - type as union array (e.g. ["string", "null"])
- *   - required (array of property names)
- *   - enum (array of allowed values)
- *   - properties (nested object schema)
- *   - items (schema for array elements)
- *   - minimum (number)
+ * Replaces the hand-rolled minimal validator with a full draft-07
+ * implementation via `ajv`. Supports the complete JSON Schema draft-07
+ * vocabulary: type, required, enum, properties, items, minimum, $ref,
+ * format, oneOf/anyOf/allOf, if/then/else, pattern, minLength, etc.
  *
- * Intentionally minimal — not a general-purpose validator. Schemas live in
- * /schema at the project root and are loaded by absolute path.
+ * Public API is unchanged from the previous hand-rolled version so
+ * callers (state.mjs, ralph-inner.mjs) need no edits:
  *
- * Usage:
  *   import { validateAgainstSchema } from './validate-schema.mjs';
  *   const result = validateAgainstSchema(obj, '/path/to/schema.json');
  *   if (!result.ok) console.error(result.errors);
+ *
+ * Schemas live in /schema at the project root and are loaded by absolute path.
+ * Loaded schemas are cached by path to avoid re-compiling on every call.
  */
 import { readFileSync } from 'node:fs';
+import Ajv from 'ajv';
 
-// Cache loaded schemas by path to avoid re-reading on every load.
-const schemaCache = new Map();
+// ── Schema cache ─────────────────────────────────────────────────────────────
+// Compiling a schema is expensive; cache the compiled validator per path.
+const validatorCache = new Map();
+const schemaObjectCache = new Map();
 
 /**
  * Load a JSON schema from disk (cached).
  * @param {string} schemaPath — absolute path to the .schema.json file
  * @returns {object|null}
  */
-function loadSchema(schemaPath) {
-  if (schemaCache.has(schemaPath)) {
-    return schemaCache.get(schemaPath);
+function loadSchemaObject(schemaPath) {
+  if (schemaObjectCache.has(schemaPath)) {
+    return schemaObjectCache.get(schemaPath);
   }
   try {
     const raw = readFileSync(schemaPath, 'utf-8');
     const schema = JSON.parse(raw);
-    schemaCache.set(schemaPath, schema);
+    schemaObjectCache.set(schemaPath, schema);
     return schema;
   } catch {
     return null;
@@ -43,74 +44,55 @@ function loadSchema(schemaPath) {
 }
 
 /**
- * Check a value against a single type string.
- * @param {*} value
- * @param {string} type
- * @returns {boolean}
+ * Get (or compile+cache) an ajv validator for the schema at the given path.
+ * @param {string} schemaPath
+ * @returns {import('ajv').ValidateFunction|null}
  */
-function matchesType(value, type) {
-  switch (type) {
-    case 'string':  return typeof value === 'string';
-    case 'number':  return typeof value === 'number' && !Number.isNaN(value);
-    case 'integer': return typeof value === 'number' && Number.isInteger(value);
-    case 'boolean': return typeof value === 'boolean';
-    case 'array':   return Array.isArray(value);
-    case 'object':  return typeof value === 'object' && value !== null && !Array.isArray(value);
-    case 'null':    return value === null;
-    default:        return true; // unknown types pass (forward-compat)
+function getValidator(schemaPath) {
+  if (validatorCache.has(schemaPath)) {
+    return validatorCache.get(schemaPath);
+  }
+  const schema = loadSchemaObject(schemaPath);
+  if (!schema) {
+    return null;
+  }
+  // allErrors=true so we collect every violation, matching the old
+  // validator's behavior of returning a full errors[] array.
+  // strict=false to tolerate schemas that use unknown keywords
+  // (forward-compat with draft 2019-09+ keywords the project may adopt).
+  const ajv = new Ajv({ allErrors: true, strict: false });
+  try {
+    const validate = ajv.compile(schema);
+    validatorCache.set(schemaPath, validate);
+    return validate;
+  } catch {
+    // Schema itself is malformed — treat as "no validator" so we fail open,
+    // matching the previous behavior of "fail open on missing schema".
+    return null;
   }
 }
 
 /**
- * Validate a value against a schema node, collecting errors.
- * @param {*} value
- * @param {object} schema
- * @param {string} path — dotted path for error messages (e.g. "root.gates.enabled")
- * @param {string[]} errors — accumulator
+ * Format an ajv error object into a human-readable string compatible with
+ * the previous hand-rolled validator's error format:
+ *   "<path>: <message>"
+ * ajv uses `instancePath` (e.g. "/gates/enabled") — convert to dotted form.
+ * @param {import('ajv').ErrorObject} err
+ * @returns {string}
  */
-function validateNode(value, schema, path, errors) {
-  // type
-  if (schema.type) {
-    const types = Array.isArray(schema.type) ? schema.type : [schema.type];
-    const ok = types.some((t) => matchesType(value, t));
-    if (!ok) {
-      errors.push(`${path}: expected type ${types.join('|')}, got ${Array.isArray(value) ? 'array' : typeof value}`);
-      return; // no point checking further on a type mismatch
-    }
+function formatAjvError(err) {
+  // Convert "/gates/enabled" → "config.gates.enabled" (root is "config" in
+  // the old validator's convention).
+  const dotted = err.instancePath
+    ? 'config' + err.instancePath.replace(/\//g, '.')
+    : 'config';
+  // For missing required properties ajv reports `missingProperty` in params
+  // and an empty instancePath on the *parent* — surface the property name.
+  let message = err.message || 'invalid';
+  if (err.params && err.params.missingProperty) {
+    message = `missing required property "${err.params.missingProperty}"`;
   }
-
-  // enum
-  if (schema.enum && !schema.enum.includes(value)) {
-    errors.push(`${path}: value "${value}" not in enum [${schema.enum.join(', ')}]`);
-  }
-
-  // minimum
-  if (schema.minimum !== undefined && typeof value === 'number' && value < schema.minimum) {
-    errors.push(`${path}: value ${value} below minimum ${schema.minimum}`);
-  }
-
-  // object properties + required
-  if (matchesType(value, 'object') && schema.properties) {
-    if (schema.required) {
-      for (const req of schema.required) {
-        if (!(req in value)) {
-          errors.push(`${path}: missing required property "${req}"`);
-        }
-      }
-    }
-    for (const [key, subSchema] of Object.entries(schema.properties)) {
-      if (key in value) {
-        validateNode(value[key], subSchema, `${path}.${key}`, errors);
-      }
-    }
-  }
-
-  // array items
-  if (matchesType(value, 'array') && schema.items) {
-    for (let i = 0; i < value.length; i++) {
-      validateNode(value[i], schema.items, `${path}[${i}]`, errors);
-    }
-  }
+  return `${dotted}: ${message}`;
 }
 
 /**
@@ -118,14 +100,36 @@ function validateNode(value, schema, path, errors) {
  * @param {object} obj — the value to validate
  * @param {string} schemaPath — absolute path to the schema file
  * @returns {{ ok: boolean, errors: string[] }}
+ *
+ * Behavior parity with the previous hand-rolled validator:
+ *   - Schema missing/unreadable → fail open: { ok: true, errors: [] }
+ *   - Schema malformed → fail open: { ok: true, errors: [] }
+ *   - Validation passes → { ok: true, errors: [] }
+ *   - Validation fails → { ok: false, errors: [...] }
  */
 export function validateAgainstSchema(obj, schemaPath) {
-  const schema = loadSchema(schemaPath);
-  if (!schema) {
-    // Schema missing/unreadable — fail open (don't block on missing schema).
+  const validate = getValidator(schemaPath);
+  if (!validate) {
+    // Schema missing/unreadable/malformed — fail open (don't block on
+    // missing schema). This matches the previous hand-rolled behavior.
     return { ok: true, errors: [] };
   }
-  const errors = [];
-  validateNode(obj, schema, 'config', errors);
+  const valid = validate(obj);
+  if (valid) {
+    return { ok: true, errors: [] };
+  }
+  const errors = (validate.errors || []).map(formatAjvError);
   return { ok: errors.length === 0, errors };
+}
+
+// ── Internal helpers exported for testing ────────────────────────────────────
+// These mirror the previous module's internal helpers so any tests that
+// imported them continue to work.
+
+/**
+ * Clear the schema cache. Useful for tests that swap schema files on disk.
+ */
+export function clearSchemaCache() {
+  validatorCache.clear();
+  schemaObjectCache.clear();
 }

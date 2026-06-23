@@ -1,6 +1,6 @@
 {
   "name": "dev-harness-cli",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Agent-agnostic software development harness CLI — scaffold, phase orchestration, gate validation for any coding agent",
   "type": "module",
   "bin": {

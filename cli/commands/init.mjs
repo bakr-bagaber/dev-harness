@@ -25,6 +25,7 @@ import {
   KNOWN_AGENT_TOOLS,
 } from '../lib/scaffold.mjs';
 import { getToolEntry } from '../lib/tool-registry.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 
 // ── Git helpers ──────────────────────────────────────────────────────────────
@@ -32,33 +33,33 @@ import { getToolEntry } from '../lib/tool-registry.mjs';
 /**
  * Check if targetDir is inside a git repository.
  */
-function isInsideGitRepo(targetDir) {
-  return execGit('git rev-parse --git-dir 2>/dev/null', targetDir).ok;
+async function isInsideGitRepo(targetDir) {
+  return (await execGit('git rev-parse --git-dir 2>/dev/null', targetDir)).ok;
 }
 
 /**
  * Check if git repo is empty (no commits yet).
  */
-function isGitRepoEmpty(targetDir) {
-  const r = execGit('git rev-list -n 1 HEAD 2>/dev/null', targetDir);
+async function isGitRepoEmpty(targetDir) {
+  const r = await execGit('git rev-list -n 1 HEAD 2>/dev/null', targetDir);
   return !r.ok || r.stdout === '';
 }
 
 /**
  * Init git repo and create initial commit.
  */
-function initGit(targetDir) {
+async function initGit(targetDir) {
   const messages = [];
 
-  if (!isInsideGitRepo(targetDir)) {
-    execGit('git init', targetDir);
+  if (!(await isInsideGitRepo(targetDir))) {
+    await execGit('git init', targetDir);
     messages.push('Initialized empty git repo');
   }
 
-  if (isGitRepoEmpty(targetDir)) {
+  if (await isGitRepoEmpty(targetDir)) {
     // Stage everything and commit
-    execGit('git add -A', targetDir);
-    execGit('git commit -m "harness: initial scaffold" --allow-empty', targetDir);
+    await execGit('git add -A', targetDir);
+    await execGit('git commit -m "harness: initial scaffold" --allow-empty', targetDir);
     messages.push('Created initial commit: harness: initial scaffold');
   } else {
     messages.push('Git repo already has commits — skipped initial commit');
@@ -306,7 +307,7 @@ export default async function initCommand(args) {
   const gitMessages = [];
   if (!noGit) {
     try {
-      const msgs = initGit(targetDir);
+      const msgs = await initGit(targetDir);
       gitMessages.push(...msgs);
     } catch (err) {
       errors.push(`Git init: ${err.message}`);
@@ -320,7 +321,7 @@ export default async function initCommand(args) {
     const message = errors.length > 0
       ? `Created ${created.length} file(s) with ${errors.length} error(s)`
       : `Created ${created.length} file(s) for stack "${stack}"`;
-    process.stdout.write(JSON.stringify({
+    emitJson({
       command: 'init',
       status,
       message,
@@ -330,7 +331,7 @@ export default async function initCommand(args) {
       files: created,
       git: gitMessages,
       errors,
-    }) + '\n');
+    });
     if (errors.length > 0) {
       process.exit(EXIT.VALIDATION_FAILURE);
     }
@@ -339,13 +340,13 @@ export default async function initCommand(args) {
 
   // Human output
   for (const f of created) {
-    process.stdout.write(`  ✓ ${f}\n`);
+    emitHuman(`  ✓ ${f}\n`);
   }
   for (const e of errors) {
     process.stderr.write(`  ✗ ${e}\n`);
   }
   for (const g of gitMessages) {
-    process.stdout.write(`  ● ${g}\n`);
+    emitHuman(`  ● ${g}\n`);
   }
-  process.stdout.write(`\nCreated ${created.length} file(s) for stack "${stack}" in ${targetDir}\n`);
+  emitHuman(`\nCreated ${created.length} file(s) for stack "${stack}" in ${targetDir}\n`);
 }

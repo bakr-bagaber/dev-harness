@@ -109,7 +109,23 @@
     "maxRetries": {
       "type": "integer",
       "minimum": 1,
-      "default": 3
+      "default": 10
+    },
+    "taskRetryCount": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Per-task retry counter. Reset to 0 on task success, incremented on task failure. Escalates when >= maxRetries."
+    },
+    "supervisor": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "apiRetries": { "type": "integer", "minimum": 1, "default": 5 },
+        "backoffMs": { "type": "integer", "minimum": 1000, "default": 60000 },
+        "lastHeartbeat": { "type": ["string", "null"], "default": null },
+        "status": { "type": "string", "enum": ["idle", "running", "stalled", "dead"], "default": "idle" }
+      }
     },
     "gateHistory": {
       "type": "array",

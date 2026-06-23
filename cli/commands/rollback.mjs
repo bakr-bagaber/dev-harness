@@ -18,15 +18,16 @@
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { execGit, getGitRoot } from '../lib/git.mjs';
 import { parseCommandArgs } from '../lib/command-helpers.mjs';
+import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 const SUBCOMMANDS = ['list', 'to', 'branch'];
 
 /**
  * Parse git tag list and return structured checkpoint data.
  */
-function listCheckpoints(gitRoot) {
+async function listCheckpoints(gitRoot) {
   // Get all harness-related tags with their dates
-  const r = execGit(
+  const r = await execGit(
     'git tag --list "phase/*" "iter/*" "manual/*" --sort=-taggerdate --format="%(refname:short)|%(taggerdate:iso)|%(objectname)"',
     gitRoot,
   );
@@ -76,25 +77,20 @@ export default async function rollbackCommand(args) {
     return;
   }
 
-  const gitRoot = getGitRoot(targetDir);
+  const gitRoot = await getGitRoot(targetDir);
   if (!gitRoot) {
-    const msg = 'Not inside a git repository. This command requires a git repo with checkpoint tags.';
-    if (json) {
-      process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: sub, status: 'error', message: msg }) + '\n');
-    } else {
-      process.stderr.write(`Error: ${msg}\n`);
-    }
-    return;
+    emitCmdError({ command: 'rollback', subcommand: sub, json, message: 'Not inside a git repository. This command requires a git repo with checkpoint tags.' });
+    process.exit(EXIT.VALIDATION_FAILURE);
   }
 
   const checkpoint = args.positionals[0] || null;
 
   // ── list ─────────────────────────────────────────────────────────────────
   if (sub === 'list') {
-    const checkpoints = listCheckpoints(gitRoot);
+    const checkpoints = await listCheckpoints(gitRoot);
 
     // Also list recovery branches
-    const branchR = execGit(
+    const branchR = await execGit(
       'git branch --list "recovery/*" --format="%(refname:short)|%(subject)|%(objectname:short)"',
       gitRoot,
     );
@@ -107,33 +103,33 @@ export default async function rollbackCommand(args) {
     }
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'rollback',
         subcommand: 'list',
         status: 'ok',
         message: `${checkpoints.length} checkpoint(s) found`,
         checkpoints,
         recoveryBranches,
-      }) + '\n');
+      });
     } else {
       if (checkpoints.length === 0 && recoveryBranches.length === 0) {
-        process.stdout.write('No checkpoints found. Phase tags (phase/*) and iteration tags (iter/*) are created automatically when auto-tagging is enabled.\n');
-        process.stdout.write('Manual checkpoints: dev-harness checkpoint create <label>\n');
+        emitHuman('No checkpoints found. Phase tags (phase/*) and iteration tags (iter/*) are created automatically when auto-tagging is enabled.\n');
+        emitHuman('Manual checkpoints: dev-harness checkpoint create <label>\n');
       } else {
         if (checkpoints.length > 0) {
-          process.stdout.write('Checkpoints:\n');
-          process.stdout.write(`${''.padEnd(32)} Type                      Date                       Hash\n`);
-          process.stdout.write(`${''.padEnd(32, '-')} ${''.padEnd(26, '-')} ${''.padEnd(26, '-')} ${''.padEnd(10, '-')}\n`);
+          emitHuman('Checkpoints:\n');
+          emitHuman(`${''.padEnd(32)} Type                      Date                       Hash\n`);
+          emitHuman(`${''.padEnd(32, '-')} ${''.padEnd(26, '-')} ${''.padEnd(26, '-')} ${''.padEnd(10, '-')}\n`);
           for (const cp of checkpoints) {
             const typeLabel = checkpointTypeLabel(cp.type).padEnd(26);
             const date = (cp.date || '—').padEnd(26);
-            process.stdout.write(`${cp.ref.padEnd(32)} ${typeLabel} ${date} ${cp.hash}\n`);
+            emitHuman(`${cp.ref.padEnd(32)} ${typeLabel} ${date} ${cp.hash}\n`);
           }
         }
         if (recoveryBranches.length > 0) {
-          process.stdout.write('\nRecovery branches:\n');
+          emitHuman('\nRecovery branches:\n');
           for (const rb of recoveryBranches) {
-            process.stdout.write(`  ${rb.branch}  (${rb.hash})\n`);
+            emitHuman(`  ${rb.branch}  (${rb.hash})\n`);
           }
         }
       }
@@ -144,20 +140,15 @@ export default async function rollbackCommand(args) {
   // ── to ───────────────────────────────────────────────────────────────────
   if (sub === 'to') {
     // Verify the tag exists
-    const tagCheck = execGit(`git rev-parse --verify "${checkpoint}^{commit}"`, gitRoot);
+    const tagCheck = await execGit(`git rev-parse --verify "${checkpoint}^{commit}"`, gitRoot);
     if (!tagCheck.ok) {
-      const msg = `Checkpoint "${checkpoint}" not found. Run: dev-harness rollback list`;
-      if (json) {
-        process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'to', checkpoint, status: 'error', message: msg }) + '\n');
-      } else {
-        process.stderr.write(`Error: ${msg}\n`);
-      }
-      return;
+      emitCmdError({ command: 'rollback', subcommand: 'to', json, checkpoint, message: `Checkpoint "${checkpoint}" not found. Run: dev-harness rollback list` });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
     const targetHash = tagCheck.stdout;
 
     // Stash any uncommitted changes
-    execGit('git stash push -m "rollback-auto-stash"', gitRoot);
+    await execGit('git stash push -m "rollback-auto-stash"', gitRoot);
 
     // Restore all files from the checkpoint
     const restoreFiles = [
@@ -167,35 +158,30 @@ export default async function rollbackCommand(args) {
     ];
 
     // First, restore the whole working tree from the tag
-    const restoreResult = execGit(`git checkout "${checkpoint}" -- .`, gitRoot);
+    const restoreResult = await execGit(`git checkout "${checkpoint}" -- .`, gitRoot);
     if (!restoreResult.ok) {
-      const msg = `Failed to restore files from ${checkpoint}: ${restoreResult.stderr || restoreResult.stdout}`;
-      if (json) {
-        process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'to', checkpoint, status: 'error', message: msg }) + '\n');
-      } else {
-        process.stderr.write(`Error: ${msg}\n`);
-      }
-      return;
+      emitCmdError({ command: 'rollback', subcommand: 'to', json, checkpoint, message: `Failed to restore files from ${checkpoint}: ${restoreResult.stderr || restoreResult.stdout}` });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
 
     // Also explicitly restore harness state files from the tag
     for (const file of restoreFiles) {
-      execGit(`git checkout "${checkpoint}" -- "${file}"`, gitRoot);
+      await execGit(`git checkout "${checkpoint}" -- "${file}"`, gitRoot);
     }
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'rollback',
         subcommand: 'to',
         checkpoint,
         hash: targetHash,
         status: 'ok',
         message: `Working tree restored to checkpoint "${checkpoint}" (${targetHash.slice(0, 8)})`,
-      }) + '\n');
+      });
     } else {
-      process.stdout.write(`✓ Working tree restored to checkpoint "${checkpoint}" (${targetHash.slice(0, 8)})\n`);
-      process.stdout.write(`  Files restored from ${checkpoint}\n`);
-      process.stdout.write('  Note: Uncommitted changes were stashed (git stash list)\n');
+      emitHuman(`✓ Working tree restored to checkpoint "${checkpoint}" (${targetHash.slice(0, 8)})\n`);
+      emitHuman(`  Files restored from ${checkpoint}\n`);
+      emitHuman('  Note: Uncommitted changes were stashed (git stash list)\n');
     }
     return;
   }
@@ -203,15 +189,10 @@ export default async function rollbackCommand(args) {
   // ── branch ───────────────────────────────────────────────────────────────
   if (sub === 'branch') {
     // Verify the tag exists
-    const tagCheck = execGit(`git rev-parse --verify "${checkpoint}^{commit}"`, gitRoot);
+    const tagCheck = await execGit(`git rev-parse --verify "${checkpoint}^{commit}"`, gitRoot);
     if (!tagCheck.ok) {
-      const msg = `Checkpoint "${checkpoint}" not found. Run: dev-harness rollback list`;
-      if (json) {
-        process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'branch', checkpoint, status: 'error', message: msg }) + '\n');
-      } else {
-        process.stderr.write(`Error: ${msg}\n`);
-      }
-      return;
+      emitCmdError({ command: 'rollback', subcommand: 'branch', json, checkpoint, message: `Checkpoint "${checkpoint}" not found. Run: dev-harness rollback list` });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
     const targetHash = tagCheck.stdout;
 
@@ -220,31 +201,21 @@ export default async function rollbackCommand(args) {
     const branchName = `recovery/from-${safeName}`;
 
     // Check branch doesn't already exist
-    const branchCheck = execGit(`git show-ref --verify --quiet refs/heads/${branchName}`, gitRoot);
+    const branchCheck = await execGit(`git show-ref --verify --quiet refs/heads/${branchName}`, gitRoot);
     if (branchCheck.ok) {
-      const msg = `Recovery branch "${branchName}" already exists. Check it out directly: git checkout ${branchName}`;
-      if (json) {
-        process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'branch', checkpoint, branch: branchName, status: 'error', message: msg }) + '\n');
-      } else {
-        process.stderr.write(`Error: ${msg}\n`);
-      }
-      return;
+      emitCmdError({ command: 'rollback', subcommand: 'branch', json, checkpoint, branch: branchName, message: `Recovery branch "${branchName}" already exists. Check it out directly: git checkout ${branchName}` });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
 
     // Create the recovery branch
-    const branchResult = execGit(`git checkout -b "${branchName}" "${checkpoint}"`, gitRoot);
+    const branchResult = await execGit(`git checkout -b "${branchName}" "${checkpoint}"`, gitRoot);
     if (!branchResult.ok) {
-      const msg = `Failed to create recovery branch: ${branchResult.stderr || branchResult.stdout}`;
-      if (json) {
-        process.stdout.write(JSON.stringify({ command: 'rollback', subcommand: 'branch', checkpoint, branch: branchName, status: 'error', message: msg }) + '\n');
-      } else {
-        process.stderr.write(`Error: ${msg}\n`);
-      }
-      return;
+      emitCmdError({ command: 'rollback', subcommand: 'branch', json, checkpoint, branch: branchName, message: `Failed to create recovery branch: ${branchResult.stderr || branchResult.stdout}` });
+      process.exit(EXIT.VALIDATION_FAILURE);
     }
 
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'rollback',
         subcommand: 'branch',
         checkpoint,
@@ -252,9 +223,9 @@ export default async function rollbackCommand(args) {
         hash: targetHash,
         status: 'ok',
         message: `Recovery branch "${branchName}" created at checkpoint "${checkpoint}"`,
-      }) + '\n');
+      });
     } else {
-      process.stdout.write(`✓ Recovery branch "${branchName}" created at checkpoint "${checkpoint}" (${targetHash.slice(0, 8)})\n`);
+      emitHuman(`✓ Recovery branch "${branchName}" created at checkpoint "${checkpoint}" (${targetHash.slice(0, 8)})\n`);
     }
     return;
   }

@@ -91,8 +91,16 @@ if [ ! -f "harness-config.json" ]; then
       "simplifier": "Relentless about clarity. Delete more than you add."
     }
   },
-  "maxRetries": 3,
-  "gateHistory": []
+  "maxRetries": 10,
+  "taskRetryCount": 0,
+  "gateHistory": [],
+  "supervisor": {
+    "enabled": false,
+    "apiRetries": 5,
+    "backoffMs": 60000,
+    "lastHeartbeat": null,
+    "status": "idle"
+  }
 }
 CFG
 fi

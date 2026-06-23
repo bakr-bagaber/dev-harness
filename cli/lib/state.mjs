@@ -71,8 +71,16 @@ export function getDefaultConfig() {
     },
     maxRetries: DEFAULT_MAX_RETRIES,
     retryCount: 0,
+    taskRetryCount: 0,
     pipelineIteration: 0,
     gateHistory: [],
+    supervisor: {
+      enabled: false,
+      apiRetries: 5,
+      backoffMs: 60000,
+      lastHeartbeat: null,
+      status: 'idle',
+    },
   };
 }
 
@@ -260,9 +268,9 @@ function recordGate(config, phase, result) {
  *
  * @param {string} targetDir
  * @param {string} toPhase
- * @returns {{ ok: boolean, error: string|null, config: object|null }}
+ * @returns {Promise<{ ok: boolean, error: string|null, config: object|null }>}
  */
-export function transitionPhase(targetDir, toPhase) {
+export async function transitionPhase(targetDir, toPhase) {
   const { config, ok, error } = loadConfig(targetDir);
   if (!ok) {
     return { ok: false, error: error || 'Cannot load config', config: null };
@@ -283,7 +291,11 @@ export function transitionPhase(targetDir, toPhase) {
     recordGate(config, config.currentPhase, 'pass');
   }
 
-  // Retry tracking: increment on same-phase re-run, reset on new phase
+  // Retry tracking: increment on same-phase re-run, reset on new phase.
+  // For feature-iterate phases (build, verify, simplify), retryCount is
+  // reset to 0 by validate when a task passes — so only actual failures
+  // (where validate fails and agent re-runs the phase) accumulate retries.
+  // For deliverable-retry phases, each re-run is a retry by definition.
   const isNewPhase = config.currentPhase !== toPhase;
   if (config.retryCount === undefined) {config.retryCount = 0;}
   if (isNewPhase) {
@@ -295,12 +307,12 @@ export function transitionPhase(targetDir, toPhase) {
   // Update phase
   config.currentPhase = toPhase;
 
-  // Update git metadata
+  // Update git metadata (async — git.mjs is now backed by simple-git)
   config.git = config.git || {};
-  config.git.branch = getGitBranch(targetDir);
-  config.git.clean = isGitClean(targetDir);
-  config.git.hasUpstream = hasGitUpstream(targetDir);
-  config.git.lastCommitMessage = getLastCommitMessage(targetDir);
+  config.git.branch = await getGitBranch(targetDir);
+  config.git.clean = await isGitClean(targetDir);
+  config.git.hasUpstream = await hasGitUpstream(targetDir);
+  config.git.lastCommitMessage = await getLastCommitMessage(targetDir);
 
   // Clear pause on transition
   config.paused = false;

@@ -15,6 +15,7 @@ import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { promptYesNo, shouldConfirmGates, shouldAutoPrompt } from '../lib/modes.mjs';
 import { parseCommandArgs, phaseLabel } from '../lib/command-helpers.mjs';
 import { renderDashboard } from '../lib/dashboard.mjs';
+import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function phaseCommand(args) {
   const { json, targetDir, gitOps } = parseCommandArgs(args);
@@ -54,16 +55,16 @@ export default async function phaseCommand(args) {
   if (preOk && preConfig.paused && preMode === 'autopilot') {
     const msg = 'Pipeline is paused. Run: dev-harness resume';
     if (json) {
-      process.stdout.write(JSON.stringify({
+      emitJson({
         command: 'phase',
         phase,
         status: 'paused',
         message: msg,
         currentPhase: preConfig.currentPhase,
         mode: preMode,
-      }) + '\n');
+      });
     } else {
-      process.stdout.write(`  ⏸ ${msg}\n`);
+      emitHuman(`  ⏸ ${msg}\n`);
     }
     return;
   }
@@ -130,25 +131,25 @@ export default async function phaseCommand(args) {
       };
     }
 
-    process.stdout.write(JSON.stringify(out) + '\n');
+    emitJson(out);
     return;
   }
 
   // ── Human output ────────────────────────────────────────────────────
   if (loopResult.status === 'complete') {
-    process.stdout.write(`\n${phaseLabel(phase)} phase complete.\n`);
+    emitHuman(`\n${phaseLabel(phase)} phase complete.\n`);
 
     if (mode === 'autopilot') {
       // Autopilot: continue pipeline automatically
       const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
       if (pipelineResult.status === 'complete') {
-        process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+        emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
       } else if (pipelineResult.status === 'instruction') {
-        process.stdout.write(`\nNext: dev-harness phase ${pipelineResult.nextPhase}\n`);
+        emitHuman(`\nNext: dev-harness phase ${pipelineResult.nextPhase}\n`);
       }
     } else if (nextPhase) {
       // Copilot: print next step
-      process.stdout.write(`Next: dev-harness phase ${nextPhase}\n`);
+      emitHuman(`Next: dev-harness phase ${nextPhase}\n`);
       // Auto-prompt: controlled by two independent flags:
       //   autoPrompt=true  → show the prompt
       //   confirmGates=true → require y/n answer before continuing
@@ -156,31 +157,31 @@ export default async function phaseCommand(args) {
         if (shouldConfirmGates(targetDir)) {
           const answer = await promptYesNo(`Advance to ${nextPhase.toUpperCase()}?`);
           if (answer === true) {
-            process.stdout.write(`\n  ● Advancing to "${nextPhase}"...\n`);
+            emitHuman(`\n  ● Advancing to "${nextPhase}"...\n`);
             const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
             if (pipelineResult.status === 'complete') {
-              process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+              emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
             }
           } else if (answer === false) {
-            process.stdout.write(`  Staying in ${phase.toUpperCase()}. Run: dev-harness phase ${nextPhase} when ready.\n`);
+            emitHuman(`  Staying in ${phase.toUpperCase()}. Run: dev-harness phase ${nextPhase} when ready.\n`);
           }
           // null = no TTY, skipped
         } else {
           // confirmGates disabled — auto-advance without waiting for input
-          process.stdout.write(`  ● Auto-advancing to "${nextPhase}"...\n`);
+          emitHuman(`  ● Auto-advancing to "${nextPhase}"...\n`);
           const pipelineResult = await continuePipeline(targetDir, phase, { json: false, verbose: true });
           if (pipelineResult.status === 'complete') {
-            process.stdout.write(`\n✓ Pipeline complete. All phases done.\n`);
+            emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
           }
         }
       }
     } else {
-      process.stdout.write('Pipeline complete.\n');
+      emitHuman('Pipeline complete.\n');
     }
   } else if (loopResult.status === 'instruction') {
     // runPhase already printed the task instructions
     if (mode === 'autopilot' && nextPhase) {
-      process.stdout.write(`After gate passes, autopilot will continue to "${nextPhase}".\n`);
+      emitHuman(`After gate passes, autopilot will continue to "${nextPhase}".\n`);
     }
   }
 }

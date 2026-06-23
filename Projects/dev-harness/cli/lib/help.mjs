@@ -55,7 +55,7 @@ Exit codes:
   2  Usage error (bad arguments)
   3  Internal error`;
 
-const VERSION = '2.0.0';
+const VERSION = '2.2.0';
 
 // Help text for JSON output
 function buildJsonHelp() {

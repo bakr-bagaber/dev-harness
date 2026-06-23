@@ -1,5 +1,43 @@
 # Changelog — dev-harness
 
+## 2026-06-23 — V2.2.0: Internal Consolidation Refactor
+
+- **Agent:** GitHub Copilot
+- **Type:** minor release (internal refactor, no breaking API changes)
+- **Context:** Post-v2.1.0 audit found two parallel output strategies (output.mjs helpers vs raw process.stdout.write), two parallel error strategies (errors.mjs vs result objects with no documented boundary), an exit-code bug class where 9 command handlers emitted errors but returned (exiting 0 on failure, breaking --json scripting/CI), stale version constants, and dead code left over from the v2.0.0→v2.1.0 migration.
+
+### Changes
+
+#### Output & Error Strategy Consolidation
+- **Extended `cli/lib/output.mjs`** with `emitCmdError({ command, subcommand?, json, message, ...extras })` and `emitResult(result, { command, json, okMessage, ... })` — replaces ~20 duplicated JSON/human error-emit blocks across command handlers.
+- **Documented canonical boundary** in `cli/lib/errors.mjs` header: lib modules return `{ ok, error, ... }` result objects; command handlers translate via output.mjs; errors.mjs (CliError/die) is CLI-entry-boundary-only.
+- **Migrated all 16 command handlers** to use `emitJson`/`emitHuman`/`emitCmdError` instead of raw `process.stdout.write(JSON.stringify(...))` and `process.stderr.write(...)`.
+
+#### Exit-Code Bug Fixes (9 handlers)
+- Fixed `checkpoint`, `worktree`, `rollback`, `config`, `run`, `select-tool`, `pause`, `resume`, `learn`, `set-mode` — error paths now exit with `EXIT.VALIDATION_FAILURE` (1) instead of returning (exit 0). Restores correct non-zero exit codes for `--json` scripting/CI consumers.
+
+#### Standardized Markers
+- Success marker standardized to `✓` (replaced `✅` in run.mjs, validate.mjs, select-tool.mjs).
+- Error prefix standardized to `✗` (replaced `Error:` prefix in checkpoint, worktree, rollback, run, select-tool).
+- JSON errors now go to **stderr** (keeping stdout parseable for `--json` consumers) via `emitCmdError`.
+
+#### Quick Wins & Dead Code Removal
+- **Fixed stale VERSION constant** in `cli/lib/help.mjs`: `2.0.0` → `2.2.0` (was out of sync with package.json since v2.1.0).
+- **Removed dead `matchesType` function** from `cli/lib/validate-schema.mjs` — unused since ajv adoption in v2.1.0, no imports anywhere.
+- **Removed dead comment** in `cli/lib/args.mjs` ("wantsJson removed — ...").
+- **Removed dead comment** in `cli/lib/output.mjs` ("emitResult and emitFatalError removed — ...").
+
+#### Version
+- `package.json`: `2.1.0` → `2.2.0`
+- `cli/lib/help.mjs` VERSION: `2.0.0` → `2.2.0`
+
+#### Documentation
+- `history/changelog.md`: this entry
+- `history/decisions.md`: ADR for result-object boundary formalization
+
+- **Impact:** All 16 command handlers now route output through a single emit layer (output.mjs). Exit codes are correct for CI/scripting. Error/success markers are consistent. Dead code from the v2.0.0→v2.1.0 migration is removed. Version constants are in sync.
+- **Verification:** `npm test` — 26/26 pass; `npm run lint` — 0 errors (26 warnings, all pre-existing style); `dev-harness --version` → `v2.2.0`
+
 ## 2026-06-21 — V2.1.0: Modernized Runtime (minimal dependencies)
 
 - **Agent:** GitHub Copilot

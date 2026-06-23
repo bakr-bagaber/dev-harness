@@ -1,5 +1,13 @@
 /**
  * Error handling — exit codes, error classes, formatting.
+ *
+ * Canonical boundary:
+ *   - lib modules return `{ ok, error, ... }` result objects (never throw).
+ *   - command handlers use output.mjs (emitResult/emitCmdError) for result
+ *     translation, and throw CliError/ValidationError for usage/fatal errors.
+ *   - This module (CliError/die) is used at the CLI entry boundary
+ *     (dev-harness.mjs top-level catch) to format and exit on thrown errors.
+ *
  * Every output path supports --json for machine parsing.
  */
 

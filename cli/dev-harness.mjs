@@ -16,6 +16,8 @@ const COMMANDS = {
   status:    () => import('./commands/status.mjs'),
   phase:     () => import('./commands/phase.mjs'),
   validate:  () => import('./commands/validate.mjs'),
+  run:       () => import('./commands/run.mjs'),
+  'select-tool': () => import('./commands/select-tool.mjs'),
   'set-mode': () => import('./commands/set-mode.mjs'),
   config:    () => import('./commands/config.mjs'),
   pause:     () => import('./commands/pause.mjs'),
@@ -59,8 +61,14 @@ async function main() {
   }
 
   // "help" command alias — redirects to --help
+  // "help <command>" → per-command help
   if (args.command === 'help') {
-    process.stdout.write(helpText(json) + '\n');
+    if (args.subcommand) {
+      const perCmd = commandHelpText(args.subcommand, json);
+      process.stdout.write((perCmd ?? helpText(json)) + '\n');
+    } else {
+      process.stdout.write(helpText(json) + '\n');
+    }
     return;
   }
 
