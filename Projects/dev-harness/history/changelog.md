@@ -1,5 +1,49 @@
 # Changelog — dev-harness
 
+## 2026-06-24 — V3.0.0: TUI-First Interactive Application
+
+- **Agent:** GitHub Copilot
+- **Type:** major release (paradigm shift: CLI-first → TUI-first)
+- **Context:** User feedback: "the TUI needs to take care of all of this, configs and workflow, full TUI control, I don't need to touch the CLI." The previous TUI was read-only dashboard bolted onto a CLI workflow. v3.0.0 transforms dev-harness into a TUI-first interactive app where the human never touches the CLI.
+
+### Changes
+
+#### New: Full TUI Application (33 new files)
+- `cli/tui/app.mjs` — TUI entry point, screen manager, global keys
+- `cli/tui/actions.mjs` — action dispatcher (TUI → lib functions, no child processes)
+- `cli/tui/screens.mjs` — screen registry + navigation stack + toast system
+- `cli/tui/screens/` — 20 screen components covering ALL 27 CLI commands
+- `cli/tui/components/` — 13 reusable Ink components (SelectList, TextInput, Toggle, Form, ConfirmDialog, Toast, ScrollView, etc.)
+
+#### Entry Point
+- `dev-harness` (no args) + TTY → launches interactive TUI
+- `dev-harness <command>` → CLI mode (unchanged, for AI agents + scripting)
+
+#### ALL 27 CLI commands mapped to TUI keys
+Every CLI command has a TUI equivalent — human never needs CLI.
+
+#### ALL 29 config parameters editable from TUI
+Config editor screen with inline editing by type.
+
+#### ALL data files viewable from TUI
+Feature list, lessons, progress, gate history, rubric, contract.
+
+#### UX Features
+- Setup wizard (first run): stack/tool/gate/mode selection + scaffold
+- Gate fix flow: actionable fixes per check type
+- Contract negotiation: inline form, propose/review/escalate
+- Confirm dialogs for destructive actions
+- Toast notifications, search/filter, scrollable views
+- Help screen with keybindings + phase guide + troubleshooting
+
+#### Backward Compatibility
+- ALL 16 CLI commands unchanged — work exactly as before
+- ALL existing tests pass (26/26)
+- CLI remains as backend for AI agents + scripting
+
+- **Impact:** dev-harness is now a TUI-first interactive application. Humans use `dev-harness` (no args) for full interactive control. CLI commands remain for AI agents and scripting.
+- **Verification:** `npm test` — 26/26 pass; `npm run lint` — 0 errors
+
 ## 2026-06-23 — V2.2.0: Internal Consolidation Refactor
 
 - **Agent:** GitHub Copilot

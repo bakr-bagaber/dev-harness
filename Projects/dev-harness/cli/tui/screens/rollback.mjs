@@ -1,0 +1,58 @@
+/** rollback — Checkpoint recovery manager (list/to/branch). */
+import { useState, useEffect, useInput, createElement as h } from 'react';
+import { Text, Box } from 'ink';
+import { ScrollView } from '../components/ScrollView.mjs';
+import { StatusBar } from '../components/StatusBar.mjs';
+import { ConfirmDialog } from '../components/ConfirmDialog.mjs';
+import { listCheckpoints, rollbackTo, rollbackBranch } from '../actions.mjs';
+import { showToast } from '../screens.mjs';
+
+export default function RollbackScreen({ targetDir, navigate }) {
+  const [checkpoints, setCheckpoints] = useState([]);
+  const [confirming, setConfirming] = useState(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const r = await listCheckpoints(targetDir);
+      setCheckpoints(r.ok ? r.data : []);
+    })();
+  }, [targetDir, tick]);
+
+  useInput((input, key) => {
+    if (key.escape) {
+      if (confirming) setConfirming(null);
+      else navigate.pop();
+    }
+  });
+
+  if (confirming) {
+    return h(ConfirmDialog, {
+      message: confirming.action === 'to'
+        ? `Restore working tree to "${confirming.ref}"?\nThis will stash uncommitted changes.`
+        : `Create recovery branch from "${confirming.ref}"?`,
+      onConfirm: async () => {
+        const r = confirming.action === 'to'
+          ? await rollbackTo(targetDir, confirming.ref)
+          : await rollbackBranch(targetDir, confirming.ref);
+        showToast(r.message, r.ok ? 'success' : 'error');
+        setConfirming(null);
+        setTick(t => t + 1);
+      },
+      onCancel: () => setConfirming(null),
+    });
+  }
+
+  const content = checkpoints.length === 0
+    ? 'No checkpoints found.\n\nCheckpoints are created automatically when auto-tagging is enabled,\nor manually with: dev-harness checkpoint create <label>'
+    : checkpoints.map(c => `${c.ref}\n  Type: ${c.type}  Date: ${c.date}  Hash: ${c.hash}`).join('\n\n');
+
+  return h(Box, { flexDirection: 'column' },
+    h(Text, { bold: true }, '╔══ Rollback Manager ══╗'),
+    h(ScrollView, { content, height: 12 }),
+    checkpoints.length > 0
+      ? h(Text, { dimColor: true }, 'Select a checkpoint from the list, then choose [t] restore or [b] branch')
+      : null,
+    h(StatusBar, { keys: [{ key: 'Esc', label: 'back' }] }),
+  );
+}

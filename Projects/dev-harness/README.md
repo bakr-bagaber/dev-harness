@@ -274,15 +274,41 @@ dev-harness --help
 
 > **Requires Node.js >= 18.** Minimal, audited runtime dependencies.
 
-### Your First Pipeline
+### 🖥️ Interactive TUI Mode (recommended for humans)
+
+Run `dev-harness` with **no arguments** in a terminal to launch the full interactive TUI:
 
 ```bash
-# 1️⃣ Scaffold a new project
-dev-harness init --stack node --target my-app
-cd my-app
+cd my-project
+dev-harness
+```
 
-# 2️⃣ Check your status
-dev-harness status
+The TUI provides a **one-stop interactive interface** — no CLI commands needed:
+- **Setup wizard** (first run) — stack selection, agent tool, gate config, mode
+- **Interactive dashboard** — phase progression, gate validation, contract negotiation
+- **Gate fix flow** — actionable fixes for each failing check (create branch, negotiate contract)
+- **Agent orchestration** — spawn agent per task, live output, auto-validate
+- **Config editor** — all 29 parameters editable inline
+- **Data viewers** — features, lessons, progress, gate history, rubric, contract
+- **Git operations** — worktree, rollback, checkpoint, all with confirm dialogs
+- **Help + onboarding** — keybindings, phase guide, troubleshooting
+
+> **CLI mode remains available** for AI agents (Tier-2 instruction mode) and scripting: `dev-harness <command> [--json]`
+
+### Your First Pipeline (TUI mode)
+
+```bash
+# 1️⃣ Run dev-harness in your project directory
+cd my-project
+dev-harness
+
+# 2️⃣ Setup wizard appears (if no config) — select stack, tool, gates, mode
+# 3️⃣ Dashboard appears — press n to start DEFINE phase
+# 4️⃣ Press f to fix gate failures (create branch, negotiate contract)
+# 5️⃣ Press v to validate, n to advance through phases
+# 6️⃣ Press a to start agent (BUILD+ phases, autopilot)
+# 7️⃣ Press ? for help at any time
+```
 
 # 3️⃣ Run the DEFINE phase (agent writes specs)
 dev-harness phase define

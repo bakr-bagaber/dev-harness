@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /**
- * dev-harness — Agent-agnostic development harness CLI.
+ * dev-harness — Agent-agnostic development harness CLI + TUI.
  *
- * Entry point. Parses args, routes to command handler,
+ * Entry point. Two modes:
+ *   - No subcommand + TTY → launches interactive TUI (full human interface)
+ *   - Subcommand given → CLI mode (for AI agents, scripting, --json)
+ *
+ * Parses args, routes to command handler or TUI app,
  * formats output (human or JSON), handles errors.
  */
 
@@ -54,8 +58,14 @@ async function main() {
     return;
   }
 
-  // No command → help (exit 0, not an error)
+  // No command → launch TUI (if TTY) or show help (if not TTY)
   if (!args.command) {
+    if (process.stdout.isTTY && !json) {
+      // Launch interactive TUI
+      const { launchTui } = await import('./tui/app.mjs');
+      await launchTui(process.cwd());
+      return;
+    }
     process.stdout.write(helpText(json) + '\n');
     return;
   }

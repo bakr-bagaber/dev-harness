@@ -2,7 +2,10 @@
  * Help text builder — centralized to keep all formatting in one place.
  */
 
-const USAGE = `Usage: dev-harness <command> [options]
+const USAGE = `Usage: dev-harness [command] [options]
+
+💡 Run "dev-harness" with NO arguments for the interactive TUI (recommended for humans).
+   CLI commands below are for AI agents, scripting, and --json automation.
 
 Pipeline commands:
   init                  Scaffold full harness in current directory
@@ -55,7 +58,7 @@ Exit codes:
   2  Usage error (bad arguments)
   3  Internal error`;
 
-const VERSION = '2.2.0';
+const VERSION = '3.0.0';
 
 // Help text for JSON output
 function buildJsonHelp() {
