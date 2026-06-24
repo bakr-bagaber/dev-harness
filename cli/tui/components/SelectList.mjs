@@ -11,14 +11,14 @@
  *   searchable?: boolean (default true)
  *   title?: string
  */
-import { useState, useInput } from 'ink';
+import { useInput } from 'ink';
 import { Text, Box } from 'ink';
-import React from 'react';
+import React, { useState } from 'react';
 
 const h = React.createElement;
 
-export function SelectList({ items, onSelect, onCancel, searchable = true, title }) {
-  const [cursor, setCursor] = useState(0);
+export function SelectList({ items, onSelect, onCancel, searchable = true, title, initialCursor = 0 }) {
+  const [cursor, setCursor] = useState(initialCursor);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
 

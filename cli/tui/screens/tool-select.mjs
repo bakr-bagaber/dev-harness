@@ -1,6 +1,6 @@
 /** tool-select — Agent tool selection screen. */
-import { useState, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { SelectList } from '../components/SelectList.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { selectTool, getAgentTools, detectAgentTools } from '../actions.mjs';

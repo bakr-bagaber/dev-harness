@@ -6,8 +6,8 @@
  *
  * Replaces: `dev-harness contract propose/review/escalate`
  */
-import { useState, useEffect, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, useEffect, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { MultiLineInput } from '../components/MultiLineInput.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { TextInput } from '../components/TextInput.mjs';

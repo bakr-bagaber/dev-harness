@@ -4,8 +4,8 @@
  * Shows context-aware keybindings, phase descriptions, and
  * troubleshooting tips. Accessible via `?` from any screen.
  */
-import { useState, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { ScrollView } from '../components/ScrollView.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 

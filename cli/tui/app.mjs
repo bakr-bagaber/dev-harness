@@ -40,7 +40,9 @@ function TuiApp({ targetDir }) {
   const [error, setError] = useState(null);
   const [ScreenComponent, setScreenComponent] = useState(null);
 
-  // Initialize screen on mount
+  // Initial screen is seeded by launchTui() before render so the first
+  // paint shows the correct screen (no "No screen loaded" flash).
+  // Re-seed defensively if targetDir ever changes mid-session.
   useEffect(() => {
     const configExists = existsSync(CONFIG_PATH(targetDir));
     if (configExists) {
@@ -135,6 +137,13 @@ export async function launchTui(targetDir) {
   }
 
   const absDir = resolve(targetDir);
+  // Seed the initial screen before render so the first paint is correct.
+  const configExists = existsSync(CONFIG_PATH(absDir));
+  if (configExists) {
+    resetToScreen('dashboard', { targetDir: absDir });
+  } else {
+    resetToScreen('setup', { targetDir: absDir });
+  }
   const inkHandle = render(h2(TuiApp, { targetDir: absDir }), {
     exitOnCtrlC: false,
   });

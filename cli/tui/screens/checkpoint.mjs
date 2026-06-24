@@ -1,6 +1,6 @@
 /** checkpoint — Manual checkpoint creation. */
-import { useState, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { TextInput } from '../components/TextInput.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { createCheckpoint } from '../actions.mjs';

@@ -14,15 +14,13 @@ import { useState, useEffect, createElement as h } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { SelectList } from '../components/SelectList.mjs';
 import { Toggle } from '../components/Toggle.mjs';
-import { TextInput } from '../components/TextInput.mjs';
 import { ProgressBar } from '../components/ProgressBar.mjs';
 import { ConfirmDialog } from '../components/ConfirmDialog.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import {
-  getAvailableStacks, detectProjectStack, getAgentTools, detectAgentTools,
+  getAvailableStacks, detectProjectStack, getAgentTools,
   scaffoldProject, createFeatureBranch,
 } from '../actions.mjs';
-import { TOOL_REGISTRY } from '../../lib/tool-registry.mjs';
 import { KNOWN_AGENT_TOOLS } from '../../lib/scaffold.mjs';
 
 const STEPS = ['stack', 'tool', 'gates', 'mode', 'review', 'scaffold'];
@@ -38,17 +36,51 @@ export default function SetupScreen({ targetDir, navigate }) {
 
   const stepName = STEPS[step];
 
+  // Free-form key handling for steps that don't use SelectList.
+  // (SelectList steps — stack/tool/mode — handle their own arrow/Enter/Esc.)
+  // Note: the Toggle component binds 'n' to "off", so we use →/Tab to advance
+  // from the gates step to avoid that conflict.
+  useInput((input, key) => {
+    if (stepName === 'gates') {
+      if (key.rightArrow || key.tab) { setStep(3); return; }
+      if (key.escape) { setStep(1); return; }
+    } else if (stepName === 'review' && !confirming) {
+      if (key.return) { setConfirming(true); return; }
+      if (key.escape) { setStep(3); return; }
+      if (input === 'q') { navigate.exit(); return; }
+    } else if (stepName === 'scaffold' && scaffoldResult) {
+      if (key.return) { navigate.replace('dashboard', { targetDir }); return; }
+      if (input === 'q') { navigate.exit(); return; }
+    }
+  });
+
+  // Kick off scaffolding as a side effect (not during render).
+  useEffect(() => {
+    if (stepName !== 'scaffold' || scaffolding) return;
+    let cancelled = false;
+    setScaffolding(true);
+    (async () => {
+      const result = await scaffoldProject(targetDir, choices);
+      if (cancelled) return;
+      setScaffoldResult(result);
+      if (result.ok) {
+        await createFeatureBranch(targetDir, 'feat/define');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [stepName]);
+
   // ── Step: Stack selection ──────────────────────────────────────────────
   if (stepName === 'stack') {
     const stacksResult = getAvailableStacks();
     const detected = detectProjectStack(targetDir);
-    const items = [
-      ...stacksResult.data.map(s => ({
-        label: s,
-        description: s === detected.data?.name ? `(detected) ${detected.data.label}` : '',
-        value: s,
-      })),
-    ];
+    const stacks = stacksResult.data || [];
+    const detectedIdx = detected.data?.name ? stacks.indexOf(detected.data.name) : -1;
+    const items = stacks.map(s => ({
+      label: s,
+      description: s === detected.data?.name ? `(detected) ${detected.data.label}` : '',
+      value: s,
+    }));
 
     return h(Box, { flexDirection: 'column' },
       h(Text, { bold: true, color: 'cyan' }, '╔══ Setup Wizard — Step 1/4: Stack ══╗'),
@@ -58,6 +90,7 @@ export default function SetupScreen({ targetDir, navigate }) {
         : null,
       h(SelectList, {
         items,
+        initialCursor: detectedIdx >= 0 ? detectedIdx : 0,
         onSelect: (item) => {
           setChoices(c => ({ ...c, stack: item.value }));
           setStep(1);
@@ -116,9 +149,9 @@ export default function SetupScreen({ targetDir, navigate }) {
         h(Text, { bold: true }, 'Gates check: feature-branch, contract, lint, tests, coverage, docs'),
       ),
       h(Box, { marginTop: 2 },
-        h(Text, { dimColor: true }, '[Enter] toggle  [n] next step  [Esc] back'),
+        h(Text, { dimColor: true }, '[Enter] toggle  [→] next step  [Esc] back'),
       ),
-      h(StatusBar, { keys: [{ key: 'Enter', label: 'toggle' }, { key: 'n', label: 'next' }, { key: 'Esc', label: 'back' }] }),
+      h(StatusBar, { keys: [{ key: 'Enter', label: 'toggle' }, { key: '→', label: 'next' }, { key: 'Esc', label: 'back' }] }),
     );
   }
 
@@ -171,20 +204,8 @@ export default function SetupScreen({ targetDir, navigate }) {
     );
   }
 
-  // ── Step: Scaffold ─────────────────────────────────────────────────────
+  // ── Step: Scaffold ─────────────────────────────────────────────────
   if (stepName === 'scaffold') {
-    if (!scaffolding) {
-      setScaffolding(true);
-      (async () => {
-        const result = await scaffoldProject(targetDir, choices);
-        setScaffoldResult(result);
-        // Create feature branch after scaffold
-        if (result.ok) {
-          await createFeatureBranch(targetDir, 'feat/define');
-        }
-      })();
-    }
-
     if (scaffoldResult) {
       return h(Box, { flexDirection: 'column' },
         h(Text, { bold: true, color: scaffoldResult.ok ? 'green' : 'yellow' },

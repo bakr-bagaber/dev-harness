@@ -5,9 +5,9 @@
  *   content: string (multi-line text)
  *   height?: number (visible lines, default 15)
  */
-import { useState, useInput } from 'ink';
+import { useInput } from 'ink';
 import { Text, Box } from 'ink';
-import React from 'react';
+import React, { useState } from 'react';
 
 const h = React.createElement;
 

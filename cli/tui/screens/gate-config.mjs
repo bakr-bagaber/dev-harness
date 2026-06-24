@@ -1,6 +1,6 @@
 /** gate-config — Gate configuration overlay. */
-import { useState, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { Toggle } from '../components/Toggle.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { getConfig, setConfig } from '../actions.mjs';

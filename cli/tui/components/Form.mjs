@@ -10,8 +10,8 @@
  *   onCancel: () => void
  *   submitLabel?: string (default "Submit")
  */
-import { useState, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { TextInput } from './TextInput.mjs';
 import { Toggle } from './Toggle.mjs';
 import { SelectList } from './SelectList.mjs';

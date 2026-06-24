@@ -51,6 +51,7 @@ export default function DashboardScreen({ targetDir, navigate }) {
   }, [targetDir, tick]);
 
   useInput(async (input, key) => {
+    try {
     // Pipeline actions
     if (input === 'n') {
       const result = await advancePhase(targetDir);
@@ -136,6 +137,9 @@ export default function DashboardScreen({ targetDir, navigate }) {
     if (input === 's') { navigate.push('status'); return; }
     if (input === '?') { navigate.push('help'); return; }
     if (input === 'q') { navigate.exit(); return; }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'error');
+    }
   });
 
   // Build context-aware keybindings

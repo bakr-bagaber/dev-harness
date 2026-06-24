@@ -6,8 +6,8 @@
  *
  * Replaces: manual `dev-harness validate` failure handling
  */
-import { useState, useEffect, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, useEffect, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { Badge } from '../components/Badge.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { TextInput } from '../components/TextInput.mjs';

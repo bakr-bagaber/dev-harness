@@ -75,12 +75,26 @@ export default async function initCommand(args) {
   const force = args.flags?.force === true || args.flags?.force === 'true';
   const noGit = args.flags?.['no-git'] === true || args.flags?.['no-git'] === 'true';
   const agentTool = args.flags?.['agent-tool'] || null;
+  const mode = args.flags?.mode || null;
 
   // Validate agent-tool if specified
   if (agentTool && !KNOWN_AGENT_TOOLS.includes(agentTool)) {
     die(
       new CliError(
         `Unknown agent tool "${agentTool}". Valid: ${KNOWN_AGENT_TOOLS.join(', ')}`,
+        EXIT.USAGE_ERROR,
+      ),
+      json,
+    );
+    return;
+  }
+
+  // Validate mode if specified
+  const VALID_MODES = ['copilot', 'autopilot'];
+  if (mode && !VALID_MODES.includes(mode)) {
+    die(
+      new CliError(
+        `Unknown mode "${mode}". Valid: ${VALID_MODES.join(', ')}`,
         EXIT.USAGE_ERROR,
       ),
       json,
@@ -299,6 +313,20 @@ export default async function initCommand(args) {
         writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
       } catch (err) {
         errors.push(`harness/config.json agentTool: ${err.message}`);
+      }
+    }
+  }
+
+  // 5c. Apply --mode override to the generated harness/config.json
+  if (mode) {
+    const configPath = join(targetDir, 'harness', 'config.json');
+    if (existsSync(configPath)) {
+      try {
+        const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
+        cfg.mode = mode;
+        writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
+      } catch (err) {
+        errors.push(`harness/config.json mode: ${err.message}`);
       }
     }
   }

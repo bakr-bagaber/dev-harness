@@ -1,6 +1,6 @@
 /** gate-history — View gate pass/fail history. */
-import { useState, useEffect, useInput, createElement as h } from 'react';
-import { Text, Box } from 'ink';
+import { useState, useEffect, createElement as h } from 'react';
+import { Text, Box, useInput } from 'ink';
 import { ScrollView } from '../components/ScrollView.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { getGateHistory } from '../actions.mjs';

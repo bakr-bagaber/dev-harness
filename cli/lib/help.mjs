@@ -123,7 +123,7 @@ export function versionText(json = false) {
 
 // Per-command help text (for `dev-harness <command> --help`).
 const COMMAND_HELP = {
-  init: `Usage: dev-harness init [--stack <name>] [--target <dir>] [--force] [--no-git] [--json]
+  init: `Usage: dev-harness init [--stack <name>] [--target <dir>] [--agent-tool <tool>] [--mode <copilot|autopilot>] [--force] [--no-git] [--json]
 
 Scaffold a full harness in the target directory:
   - Detects stack (or use --stack)
@@ -132,11 +132,13 @@ Scaffold a full harness in the target directory:
   - Initializes git repo + initial commit (unless --no-git)
 
 Flags:
-  --stack <name>    Override stack detection (node|python|go|rust|java|...)
-  --target <dir>    Target directory (default: cwd)
-  --force           Overwrite existing harness files
-  --no-git          Skip git init
-  --json            JSON output`,
+  --stack <name>          Override stack detection (node|python|go|rust|java|...)
+  --target <dir>          Target directory (default: cwd)
+  --agent-tool <tool>     Configure agent tool (e.g. claude-code, cursor, copilot)
+  --mode <mode>           Pipeline mode: copilot (default) or autopilot
+  --force                 Overwrite existing harness files
+  --no-git                Skip git init
+  --json                  JSON output`,
 
   status: `Usage: dev-harness status [--target <dir>] [--json]
 
