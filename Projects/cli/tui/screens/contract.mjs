@@ -6,7 +6,7 @@
  *
  * Replaces: `dev-harness contract propose/review/escalate`
  */
-import { useState, useInput, createElement as h } from 'react';
+import { useState, useEffect, useInput, createElement as h } from 'react';
 import { Text, Box } from 'ink';
 import { MultiLineInput } from '../components/MultiLineInput.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
@@ -25,11 +25,11 @@ export default function ContractScreen({ targetDir, navigate }) {
   const [contractStatus, setContractStatus] = useState(null);
   const [escalateReason, setEscalateReason] = useState('');
 
-  // Load current contract status
-  useState(() => {
+  // Load current contract status on mount
+  useEffect(() => {
     const r = getContract(targetDir);
     if (r.ok) setContractStatus(r.data);
-  });
+  }, [targetDir]);
 
   useInput((input, key) => {
     if (key.escape) {

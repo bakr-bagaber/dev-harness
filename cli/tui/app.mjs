@@ -30,11 +30,15 @@ const h2 = h;
 
 /**
  * Root TUI component — manages screen stack and global keys.
+ *
+ * ⚠ All hooks must be at the top level, before any conditional return,
+ * to satisfy React's Rules of Hooks (same hook count on every render).
  */
 function TuiApp({ targetDir }) {
   const { exit } = useApp();
   const [tick, setTick] = useState(0);
   const [error, setError] = useState(null);
+  const [ScreenComponent, setScreenComponent] = useState(null);
 
   // Initialize screen on mount
   useEffect(() => {
@@ -47,25 +51,14 @@ function TuiApp({ targetDir }) {
     setTick(t => t + 1);
   }, [targetDir]);
 
-  // Global key handler (applies to all screens)
-  useInput((input, key) => {
-    // q = quit (only if not in a text input — screens handle their own q)
-    // Esc = back (handled per-screen, but also here as fallback)
-    // These are handled by individual screens; this is a safety net.
-  });
-
+  // Determine current screen from nav stack
   const current = getCurrentScreen();
   const navTrail = getNavStack().map(s => s.name);
 
-  if (!current) {
-    return h2(Text, { color: 'red' }, 'No screen loaded. Press q to exit.');
-  }
-
-  // Load screen component lazily
-  const [ScreenComponent, setScreenComponent] = useState(null);
-
+  // Lazy-load screen component when current.name changes
   useEffect(() => {
     let cancelled = false;
+    if (!current) return;
     const loader = getScreenLoader(current.name);
     if (!loader) {
       setError(`Unknown screen: ${current.name}`);
@@ -80,7 +73,19 @@ function TuiApp({ targetDir }) {
       if (!cancelled) setError(`Failed to load screen: ${err.message}`);
     });
     return () => { cancelled = true; };
-  }, [current.name]);
+  }, [current?.name]);
+
+  // Global key handler
+  useInput((input, key) => {
+    // Screens handle their own keyboard input.
+    // This is a safety net for global keys.
+  });
+
+  // ── Render (no early returns — all hooks run first) ──────────────────
+
+  if (!current) {
+    return h2(Text, { color: 'red' }, 'No screen loaded. Press q to exit.');
+  }
 
   if (error) {
     return h2(Box, { flexDirection: 'column' },
