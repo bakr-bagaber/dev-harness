@@ -73,7 +73,7 @@ export default function StatusScreen({ targetDir, navigate }) {
   }, [targetDir]);
 
   useInput((input, key) => {
-    if (key.escape || input === 'q' || input === 's') {
+    if (key.escape || input === 'q') {
       navigate.pop();
     }
   });

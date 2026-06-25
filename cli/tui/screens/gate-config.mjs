@@ -14,16 +14,22 @@ export default function GateConfigScreen({ targetDir, navigate }) {
   const [editingThreshold, setEditingThreshold] = useState(false);
 
   useInput((input, key) => {
-    if (key.escape) navigate.pop();
-    if (input === 't' && !editingThreshold) setEditingThreshold(true);
+    if (key.escape) {
+      if (editingThreshold) { setEditingThreshold(false); return; }
+      navigate.pop();
+      return;
+    }
     if (editingThreshold) {
-      if (input === '↑' || input === '+') setThreshold(t => Math.min(100, t + 5));
-      if (input === '↓' || input === '-') setThreshold(t => Math.max(0, t - 5));
+      if (key.upArrow || input === '+') setThreshold(t => Math.min(100, t + 5));
+      if (key.downArrow || input === '-') setThreshold(t => Math.max(0, t - 5));
       if (key.return) {
         setConfig(targetDir, 'gates.coverage.threshold', threshold);
         setEditingThreshold(false);
         showToast(`Threshold set to ${threshold}%`, 'success');
       }
+    } else {
+      // Enter to edit threshold (Toggle handles its own space/y/n)
+      if (key.return) setEditingThreshold(true);
     }
   });
 
@@ -55,9 +61,9 @@ export default function GateConfigScreen({ targetDir, navigate }) {
       h(Text, { bold: true }, 'Coverage threshold: '),
       h(Text, { color: 'cyan', bold: true }, `${threshold}%`),
       editingThreshold
-        ? h(Text, { dimColor: true }, '  [↑↓] adjust  [Enter] save')
-        : h(Text, { dimColor: true }, '  [t] edit'),
+        ? h(Text, { dimColor: true }, '  [↑↓] adjust  [Enter] save  [Esc] cancel')
+        : h(Text, { dimColor: true }, '  [Enter] edit'),
     ),
-    h(StatusBar, { keys: [{ key: 'Esc', label: 'back' }] }),
+    h(StatusBar, { keys: [{ key: 'Enter', label: 'edit threshold' }, { key: 'space', label: 'toggle' }, { key: 'Esc', label: 'back' }] }),
   );
 }

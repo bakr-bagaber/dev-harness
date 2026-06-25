@@ -36,6 +36,7 @@ export default function GateFixScreen({ targetDir, navigate, phase }) {
   const [branchName, setBranchName] = useState('');
   const [creatingBranch, setCreatingBranch] = useState(false);
   const [tick, setTick] = useState(0);
+  const [cursor, setCursor] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -46,42 +47,45 @@ export default function GateFixScreen({ targetDir, navigate, phase }) {
     })();
   }, [targetDir, phase, tick]);
 
-  useInput(async (input, key) => {
-    if (key.escape || input === 'q') {
-      navigate.pop();
-      return;
-    }
-    if (input === 'r') {
-      setTick(t => t + 1);
-      return;
-    }
-    if (creatingBranch) return;
-
-    // Handle fix actions for failing checks
+  // Build action menu from failing checks + re-validate
+  const buildActions = () => {
+    const actions = [];
     if (result?.data?.failures) {
       for (const failName of result.data.failures) {
         const fix = FIX_ACTIONS[failName];
-        if (fix && input === fix.key.toLowerCase()) {
-          if (fix.action === 'create-branch') {
-            setCreatingBranch(true);
-            return;
-          }
-          if (fix.action === 'open-contract') {
-            navigate.push('contract');
-            return;
-          }
-          if (fix.action === 'show-git-status') {
-            showToast('Fix: commit or stash changes — run `git status` then `git add` + `git commit`, or `git stash`', 'info');
-            return;
-          }
-          if (fix.action === 'show-guidance') {
-            const guidance = failName === 'lint'
-              ? 'Fix linting: run your linter (e.g. `npm run lint`), resolve reported errors, then re-validate'
-              : 'Fix tests: run your test suite (e.g. `npm test`), fix failing tests, then re-validate';
-            showToast(guidance, 'info');
-            return;
-          }
+        if (fix) {
+          actions.push({ label: fix.label, failName, fix });
         }
+      }
+    }
+    actions.push({ label: 'Re-validate gates', isRevalidate: true });
+    return actions;
+  };
+
+  const actions = buildActions();
+
+  useInput(async (input, key) => {
+    if (key.escape) { navigate.pop(); return; }
+    if (creatingBranch) return;
+    if (key.upArrow) setCursor(c => (c > 0 ? c - 1 : actions.length - 1));
+    if (key.downArrow) setCursor(c => (c < actions.length - 1 ? c + 1 : 0));
+    if (key.return) {
+      const sel = actions[cursor];
+      if (!sel) return;
+      if (sel.isRevalidate) { setTick(t => t + 1); setCursor(0); return; }
+      const { fix, failName } = sel;
+      if (fix.action === 'create-branch') { setCreatingBranch(true); return; }
+      if (fix.action === 'open-contract') { navigate.push('contract'); return; }
+      if (fix.action === 'show-git-status') {
+        showToast('Fix: commit or stash changes — run `git status` then `git add` + `git commit`, or `git stash`', 'info');
+        return;
+      }
+      if (fix.action === 'show-guidance') {
+        const guidance = failName === 'lint'
+          ? 'Fix linting: run your linter (e.g. `npm run lint`), resolve reported errors, then re-validate'
+          : 'Fix tests: run your test suite (e.g. `npm test`), fix failing tests, then re-validate';
+        showToast(guidance, 'info');
+        return;
       }
     }
   });
@@ -130,12 +134,12 @@ export default function GateFixScreen({ targetDir, navigate, phase }) {
     return h(Box, { flexDirection: 'column' },
       h(Badge, { status: 'pass' }),
       h(Text, { color: 'green' }, result.message),
-      h(Text, { dimColor: true, marginTop: 1 }, 'Press n from dashboard to advance to next phase'),
-      h(StatusBar, { keys: [{ key: 'Esc', label: 'back' }, { key: 'n', label: 'advance (from dashboard)' }] }),
+      h(Text, { dimColor: true, marginTop: 1 }, 'Select "Advance" from dashboard to go to next phase'),
+      h(StatusBar, { keys: [{ key: 'Esc', label: 'back' }] }),
     );
   }
 
-  // Show failures with fix actions
+  // Show failures with fix actions (menu-driven)
   const checks = result.data?.checks || [];
   const failures = checks.filter(c => !c.pass);
 
@@ -144,22 +148,32 @@ export default function GateFixScreen({ targetDir, navigate, phase }) {
     h(Text, { color: 'red' }, result.message),
     h(Box, { flexDirection: 'column', marginTop: 1 },
       failures.map((check, i) => {
-        const fix = FIX_ACTIONS[check.name];
         return h(Box, { key: i, flexDirection: 'column', marginBottom: 1 },
           h(Text, null,
             h(Text, { color: 'red', bold: true }, '✗ '),
             h(Text, { bold: true }, check.name),
           ),
           h(Text, { dimColor: true }, `  ${check.detail}`),
-          fix
-            ? h(Text, { color: 'cyan' }, `  [${fix.key}] ${fix.label}`)
-            : h(Text, { dimColor: true }, '  Fix the issue and re-validate'),
         );
       }),
     ),
+    // Action menu
+    h(Box, { flexDirection: 'column', marginTop: 1 },
+      h(Text, { bold: true, dimColor: true }, 'Actions — ↑↓ navigate, Enter select'),
+      actions.map((act, i) =>
+        h(Box, { key: i },
+          h(Text, { color: i === cursor ? 'cyan' : undefined, bold: i === cursor },
+            i === cursor ? '❯ ' : '  '),
+          h(Text, { bold: i === cursor, color: i === cursor ? 'cyan' : undefined },
+            act.isRevalidate ? '↻ ' : '🔧 '),
+          h(Text, { bold: i === cursor, color: i === cursor ? 'cyan' : undefined },
+            act.label),
+        ),
+      ),
+    ),
     h(StatusBar, { keys: [
-      ...failures.map(c => FIX_ACTIONS[c.name]).filter(Boolean).map(f => ({ key: f.key, label: f.label })),
-      { key: 'r', label: 're-validate' },
+      { key: '↑↓', label: 'navigate' },
+      { key: 'Enter', label: 'select' },
       { key: 'Esc', label: 'back' },
     ] }),
   );

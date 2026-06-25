@@ -1,16 +1,16 @@
 /** retry-config — 3-level retry configuration overlay (v3.1.0+).
- *  Mirrors `config set retry.*` for tasks/features/phases enabled + maxRetries. */
+ *  Mirrors `config set retry.*` for tasks/features/phases enabled + maxRetries.
+ *  Unified navigation: ↑↓ navigate, Enter toggle/edit, Esc back. */
 import { useState, createElement as h } from 'react';
 import { Text, Box, useInput } from 'ink';
-import { Toggle } from '../components/Toggle.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { getConfig, setConfig } from '../actions.mjs';
 import { showToast } from '../screens.mjs';
 
 const LEVELS = [
-  { key: 'tasks',    label: 'Task retry',    desc: 'Per-task retry (feature-iterate phases)' },
-  { key: 'features', label: 'Feature retry', desc: 'Reset feature tasks + re-sweep on task exhaustion' },
-  { key: 'phases',   label: 'Phase retry',   desc: 'Reset all features + re-run phase on feature exhaustion' },
+  { key: 'tasks',    label: 'Task retry',    desc: 'Per-task retry (feature-iterate phases)',    configKey: 'retry.tasks' },
+  { key: 'features', label: 'Feature retry', desc: 'Reset feature tasks + re-sweep on task exhaustion', configKey: 'retry.features' },
+  { key: 'phases',   label: 'Phase retry',   desc: 'Reset all features + re-run phase on feature exhaustion', configKey: 'retry.phases' },
 ];
 
 export default function RetryConfigScreen({ targetDir, navigate }) {
@@ -25,8 +25,14 @@ export default function RetryConfigScreen({ targetDir, navigate }) {
   const [phasesEnabled, setPhasesEnabled] = useState(retry.phases?.enabled ?? false);
   const [phasesMax, setPhasesMax] = useState(retry.phases?.maxRetries ?? 2);
 
-  // Which maxRetries field is being edited (1/2/3 for tasks/features/phases)
+  // 6 rows: 3 toggles + 3 maxRetries editors. cursor 0-5.
+  const [cursor, setCursor] = useState(0);
+  // editing = which maxRetries row is being adjusted (1/2/3), 0 = none
   const [editing, setEditing] = useState(0);
+
+  const states = [tasksEnabled, featuresEnabled, phasesEnabled];
+  const maxes = [tasksMax, featuresMax, phasesMax];
+  const maxSetters = [setTasksMax, setFeaturesMax, setPhasesMax];
 
   useInput((input, key) => {
     if (key.escape) {
@@ -35,67 +41,67 @@ export default function RetryConfigScreen({ targetDir, navigate }) {
       return;
     }
     if (editing) {
-      if (input === '↑' || input === '+') {
-        const setter = editing === 1 ? setTasksMax : editing === 2 ? setFeaturesMax : setPhasesMax;
-        setter(m => m + 1);
+      // Editing maxRetries for row `editing` (1-3)
+      if (key.upArrow || input === '+') {
+        maxSetters[editing - 1](m => m + 1);
       }
-      if (input === '↓' || input === '-') {
-        const setter = editing === 1 ? setTasksMax : editing === 2 ? setFeaturesMax : setPhasesMax;
-        setter(m => Math.max(1, m - 1));
+      if (key.downArrow || input === '-') {
+        maxSetters[editing - 1](m => Math.max(1, m - 1));
       }
       if (key.return) {
-        const path = editing === 1 ? 'retry.tasks.maxRetries' : editing === 2 ? 'retry.features.maxRetries' : 'retry.phases.maxRetries';
-        const val = editing === 1 ? tasksMax : editing === 2 ? featuresMax : phasesMax;
+        const path = `retry.${LEVELS[editing - 1].key}.maxRetries`;
+        const val = maxes[editing - 1];
         setConfig(targetDir, path, val);
         showToast(`${LEVELS[editing - 1].label} maxRetries = ${val}`, 'success');
         setEditing(0);
       }
       return;
     }
-    // Toggle keys: 1=tasks, 2=features, 3=phases
-    if (input === '1') {
-      const val = !tasksEnabled;
-      setTasksEnabled(val);
-      setConfig(targetDir, 'retry.tasks.enabled', val);
-      showToast(`Task retry ${val ? 'enabled' : 'disabled'}`, 'success');
+    // Navigate 6 rows (3 toggle + 3 max)
+    if (key.upArrow) setCursor(c => (c > 0 ? c - 1 : 5));
+    if (key.downArrow) setCursor(c => (c < 5 ? c + 1 : 0));
+    if (key.return) {
+      // Rows 0-2 = toggle, rows 3-5 = edit maxRetries
+      if (cursor < 3) {
+        // Toggle
+        const lvl = LEVELS[cursor];
+        const setters = [setTasksEnabled, setFeaturesEnabled, setPhasesEnabled];
+        const newVal = !states[cursor];
+        setters[cursor](newVal);
+        setConfig(targetDir, `retry.${lvl.key}.enabled`, newVal);
+        showToast(`${lvl.label} ${newVal ? 'enabled' : 'disabled'}`, 'success');
+      } else {
+        // Edit maxRetries
+        setEditing(cursor - 2); // rows 3,4,5 → editing 1,2,3
+      }
     }
-    if (input === '2') {
-      const val = !featuresEnabled;
-      setFeaturesEnabled(val);
-      setConfig(targetDir, 'retry.features.enabled', val);
-      showToast(`Feature retry ${val ? 'enabled' : 'disabled'}`, 'success');
-    }
-    if (input === '3') {
-      const val = !phasesEnabled;
-      setPhasesEnabled(val);
-      setConfig(targetDir, 'retry.phases.enabled', val);
-      showToast(`Phase retry ${val ? 'enabled' : 'disabled'}`, 'success');
-    }
-    // Edit maxRetries: a/b/c
-    if (input === 'a') setEditing(1);
-    if (input === 'b') setEditing(2);
-    if (input === 'c') setEditing(3);
   });
 
   const renderRow = (idx) => {
     const lvl = LEVELS[idx];
-    const enabled = idx === 0 ? tasksEnabled : idx === 1 ? featuresEnabled : phasesEnabled;
-    const max = idx === 0 ? tasksMax : idx === 1 ? featuresMax : phasesMax;
-    const editKey = idx === 0 ? 'a' : idx === 1 ? 'b' : 'c';
+    const enabled = states[idx];
+    const max = maxes[idx];
+    const isToggleRow = idx === cursor;
+    const isMaxRow = (idx + 3) === cursor;
     const isEditing = editing === idx + 1;
     return h(Box, { key: lvl.key, flexDirection: 'column', marginTop: 1 },
       h(Box, null,
-        h(Text, { bold: true }, `${idx + 1}. ${lvl.label} `),
+        h(Text, { color: isToggleRow ? 'cyan' : undefined, bold: isToggleRow },
+          isToggleRow ? '❯ ' : '  '),
+        h(Text, { bold: isToggleRow, color: isToggleRow ? 'cyan' : undefined },
+          `${lvl.label} `),
         h(Text, { color: enabled ? 'green' : 'gray' }, enabled ? '[ON]' : '[off]'),
-        h(Text, { dimColor: true }, `  (${idx + 1} to toggle)`),
+        h(Text, { dimColor: true }, '  [Enter] toggle'),
       ),
       h(Text, { dimColor: true }, `   ${lvl.desc}`),
       h(Box, { marginTop: 0 },
+        h(Text, { color: isMaxRow ? 'cyan' : undefined, bold: isMaxRow },
+          isMaxRow ? '❯ ' : '  '),
         h(Text, null, `   maxRetries: `),
         h(Text, { color: 'cyan', bold: true }, `${max}`),
         isEditing
           ? h(Text, { dimColor: true }, '  [↑↓] adjust  [Enter] save  [Esc] cancel')
-          : h(Text, { dimColor: true }, `  [${editKey}] edit`),
+          : h(Text, { dimColor: true }, '  [Enter] edit'),
       ),
     );
   };
@@ -107,8 +113,8 @@ export default function RetryConfigScreen({ targetDir, navigate }) {
     renderRow(1),
     renderRow(2),
     h(StatusBar, { keys: [
-      { key: '1/2/3', label: 'toggle' },
-      { key: 'a/b/c', label: 'edit max' },
+      { key: '↑↓', label: 'navigate' },
+      { key: 'Enter', label: 'toggle/edit' },
       { key: 'Esc', label: 'back' },
     ] }),
   );

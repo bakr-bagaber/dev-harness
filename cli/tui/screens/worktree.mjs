@@ -31,16 +31,53 @@ export default function WorktreeScreen({ targetDir, navigate }) {
       return;
     }
     if (mode === 'list') {
-      if (input === 'c') setMode('create');
-      if (input === 'p') setMode('prune');
+      // Action menu: ↑↓ navigate worktrees, number keys for actions
       if (key.upArrow) setCursor(c => Math.max(0, c - 1));
       if (key.downArrow) setCursor(c => Math.max(0, Math.min(worktrees.length - 1, c + 1)));
-      if (input === 'x') {
+      if (input === '1') setMode('create');
+      if (input === '2') setMode('prune');
+      if (input === '3' && worktrees.length > 0) {
         const sel = worktrees[cursor];
         if (sel) setRemoving(sel.path || sel.branch);
       }
     }
   });
+
+  // List mode with action menu at bottom
+  if (mode === 'list') {
+    const content = worktrees.length === 0
+      ? 'No worktrees found.'
+      : worktrees.map((w, i) => {
+          const marker = i === cursor ? '▶ ' : '  ';
+          return `${marker}${w.path}\n  Branch: ${w.branch}\n  Hash: ${w.hash}`;
+        }).join('\n\n');
+
+    const listActions = [
+      { label: 'Create worktree', mode: 'create' },
+      { label: 'Prune orphaned worktrees', mode: 'prune' },
+      { label: worktrees.length > 0 ? `Remove worktree "${worktrees[cursor]?.path || ''}"` : null, mode: 'remove' },
+    ].filter(a => a.label !== null);
+
+    return h(Box, { flexDirection: 'column' },
+      h(Text, { bold: true }, '╔══ Worktree Manager ══╗'),
+      h(ScrollView, { content, height: 10 }),
+      h(Box, { marginTop: 1, flexDirection: 'column' },
+        h(Text, { bold: true, dimColor: true }, 'Actions — ↑↓ select worktree, then choose:'),
+        h(Box, null,
+          h(Text, { color: 'cyan' }, '[1]'), h(Text, null, ' Create   '),
+          h(Text, { color: 'cyan' }, '[2]'), h(Text, null, ' Prune   '),
+          h(Text, { color: 'cyan' }, '[3]'), h(Text, null, worktrees.length > 0 ? ' Remove selected' : ''),
+        ),
+      ),
+      h(StatusBar, { keys: [
+        { key: '↑↓', label: 'select' },
+        { key: '1', label: 'create' },
+        { key: '2', label: 'prune' },
+        { key: '3', label: 'remove' },
+        { key: 'Esc', label: 'back' },
+      ] }),
+    );
+  }
 
   if (mode === 'create') {
     return h(Box, { flexDirection: 'column' },
@@ -84,22 +121,5 @@ export default function WorktreeScreen({ targetDir, navigate }) {
     });
   }
 
-  const content = worktrees.length === 0
-    ? 'No worktrees found.'
-    : worktrees.map((w, i) => {
-        const marker = i === cursor ? '▶ ' : '  ';
-        return `${marker}${w.path}\n  Branch: ${w.branch}\n  Hash: ${w.hash}`;
-      }).join('\n\n');
-
-  return h(Box, { flexDirection: 'column' },
-    h(Text, { bold: true }, '╔══ Worktree Manager ══╗'),
-    h(ScrollView, { content, height: 12 }),
-    h(StatusBar, { keys: [
-      { key: 'c', label: 'create' },
-      { key: 'x', label: 'remove' },
-      { key: 'p', label: 'prune' },
-      { key: '↑↓', label: 'select' },
-      { key: 'Esc', label: 'back' },
-    ] }),
-  );
+  return null; // list mode handled above
 }

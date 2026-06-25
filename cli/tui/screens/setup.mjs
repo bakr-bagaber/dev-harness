@@ -38,11 +38,13 @@ export default function SetupScreen({ targetDir, navigate }) {
 
   // Free-form key handling for steps that don't use SelectList.
   // (SelectList steps — stack/tool/mode — handle their own arrow/Enter/Esc.)
-  // Note: the Toggle component binds 'n' to "off", so we use →/Tab to advance
-  // from the gates step to avoid that conflict.
+  // Unified navigation: Enter = toggle/next/confirm, Esc = back, q = quit.
   useInput((input, key) => {
     if (stepName === 'gates') {
-      if (key.rightArrow || key.tab) { setStep(3); return; }
+      // Enter advances to next step (Toggle component handles its own Enter for toggle)
+      // but we need a way to advance. Use downArrow/Enter when not focused on toggle.
+      // Simpler: Enter on gates step = next (Toggle uses space/y/n for toggle).
+      if (key.return) { setStep(3); return; }
       if (key.escape) { setStep(1); return; }
     } else if (stepName === 'review' && !confirming) {
       if (key.return) { setConfirming(true); return; }
@@ -149,9 +151,9 @@ export default function SetupScreen({ targetDir, navigate }) {
         h(Text, { bold: true }, 'Gates check: feature-branch, contract, lint, tests, coverage, docs'),
       ),
       h(Box, { marginTop: 2 },
-        h(Text, { dimColor: true }, '[Enter] toggle  [→] next step  [Esc] back'),
+        h(Text, { dimColor: true }, '[space] toggle gates  [Enter] next step  [Esc] back'),
       ),
-      h(StatusBar, { keys: [{ key: 'Enter', label: 'toggle' }, { key: '→', label: 'next' }, { key: 'Esc', label: 'back' }] }),
+      h(StatusBar, { keys: [{ key: 'space', label: 'toggle' }, { key: 'Enter', label: 'next' }, { key: 'Esc', label: 'back' }] }),
     );
   }
 

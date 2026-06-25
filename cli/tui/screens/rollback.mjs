@@ -31,11 +31,13 @@ export default function RollbackScreen({ targetDir, navigate }) {
     if (checkpoints.length === 0) return;
     if (key.upArrow) setCursor(c => Math.max(0, c - 1));
     if (key.downArrow) setCursor(c => Math.min(checkpoints.length - 1, c + 1));
-    if (input === 't') {
+    // Enter → restore (default action); Shift+Enter or separate menu for branch
+    // Use simple action menu: 1=restore, 2=branch
+    if (input === '1') {
       const sel = checkpoints[cursor];
       if (sel) setConfirming({ action: 'to', ref: sel.ref });
     }
-    if (input === 'b') {
+    if (input === '2') {
       const sel = checkpoints[cursor];
       if (sel) setConfirming({ action: 'branch', ref: sel.ref });
     }
@@ -73,8 +75,8 @@ export default function RollbackScreen({ targetDir, navigate }) {
       : null,
     h(StatusBar, { keys: [
       { key: '↑↓', label: 'select' },
-      { key: 't', label: 'restore' },
-      { key: 'b', label: 'branch' },
+      { key: '1', label: 'restore' },
+      { key: '2', label: 'branch' },
       { key: 'Esc', label: 'back' },
     ] }),
   );

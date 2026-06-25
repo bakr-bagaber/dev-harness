@@ -18,7 +18,7 @@ export default function LessonsScreen({ targetDir, navigate }) {
   }, [targetDir]);
 
   useInput((input, key) => {
-    if (key.escape || input === 'q' || input === 'L') navigate.pop();
+    if (key.escape || input === 'q') navigate.pop();
   });
 
   return h(Box, { flexDirection: 'column' },

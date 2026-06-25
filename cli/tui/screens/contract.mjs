@@ -17,11 +17,17 @@ import {
 import { showToast } from '../screens.mjs';
 
 const MODES = { form: 'form', review: 'review', escalate: 'escalate' };
+const REVIEW_ACTIONS = [
+  { label: 'Agree — contract accepted', action: 'agree' },
+  { label: 'Needs revision — back to form', action: 'revise' },
+  { label: 'Escalate — human adjudication', action: 'escalate' },
+];
 
 export default function ContractScreen({ targetDir, navigate }) {
   const [mode, setMode] = useState(MODES.form);
   const [scope, setScope] = useState('');
   const [exclusions, setExclusions] = useState('');
+  const [reviewCursor, setReviewCursor] = useState(0);
   const [contractStatus, setContractStatus] = useState(null);
   const [escalateReason, setEscalateReason] = useState('');
 
@@ -38,20 +44,26 @@ export default function ContractScreen({ targetDir, navigate }) {
       else setMode(MODES.form);
       return;
     }
-    // Review mode: a=agree, r=revise, e=escalate
+    // Review mode: ↑↓ navigate, Enter select action
     if (mode === MODES.review) {
-      if (input === 'a') {
-        const r = reviewSprintContract(targetDir, { agreed: true });
-        showToast(r.ok ? 'Contract agreed' : r.message, r.ok ? 'success' : 'error');
-        if (r.ok) navigate.pop();
-      }
-      if (input === 'r') {
-        const r = reviewSprintContract(targetDir, { needsRevision: true });
-        showToast(r.ok ? 'Contract sent for revision' : r.message, r.ok ? 'warning' : 'error');
-        if (r.ok) setMode(MODES.form);
-      }
-      if (input === 'e') {
-        setMode(MODES.escalate);
+      if (key.upArrow) setReviewCursor(c => (c > 0 ? c - 1 : REVIEW_ACTIONS.length - 1));
+      if (key.downArrow) setReviewCursor(c => (c < REVIEW_ACTIONS.length - 1 ? c + 1 : 0));
+      if (key.return) {
+        const act = REVIEW_ACTIONS[reviewCursor];
+        if (!act) return;
+        if (act.action === 'agree') {
+          const r = reviewSprintContract(targetDir, { agreed: true });
+          showToast(r.ok ? 'Contract agreed' : r.message, r.ok ? 'success' : 'error');
+          if (r.ok) navigate.pop();
+        }
+        if (act.action === 'revise') {
+          const r = reviewSprintContract(targetDir, { needsRevision: true });
+          showToast(r.ok ? 'Contract sent for revision' : r.message, r.ok ? 'warning' : 'error');
+          if (r.ok) setMode(MODES.form);
+        }
+        if (act.action === 'escalate') {
+          setMode(MODES.escalate);
+        }
       }
     }
   });
@@ -90,14 +102,21 @@ export default function ContractScreen({ targetDir, navigate }) {
         h(Text, { dimColor: true }, 'Review the contract in harness/sprint-contract.md'),
       ),
       h(Box, { marginTop: 2, flexDirection: 'column' },
-        h(Text, { color: 'green' }, '[a] Agree — contract accepted'),
-        h(Text, { color: 'yellow' }, '[r] Needs revision — back to form'),
-        h(Text, { color: 'red' }, '[e] Escalate — human adjudication'),
+        h(Text, { bold: true, dimColor: true }, '↑↓ navigate, Enter select'),
+        REVIEW_ACTIONS.map((act, i) =>
+          h(Box, { key: i },
+            h(Text, { color: i === reviewCursor ? 'cyan' : undefined, bold: i === reviewCursor },
+              i === reviewCursor ? '❯ ' : '  '),
+            h(Text, {
+              bold: i === reviewCursor,
+              color: i === reviewCursor ? 'cyan' : (act.action === 'agree' ? 'green' : act.action === 'revise' ? 'yellow' : 'red'),
+            }, act.label),
+          ),
+        ),
       ),
       h(StatusBar, { keys: [
-        { key: 'a', label: 'agree' },
-        { key: 'r', label: 'revise' },
-        { key: 'e', label: 'escalate' },
+        { key: '↑↓', label: 'navigate' },
+        { key: 'Enter', label: 'select' },
         { key: 'Esc', label: 'back' },
       ] }),
     );

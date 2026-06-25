@@ -14,7 +14,7 @@ export default function RubricScreen({ targetDir, navigate }) {
   }, [targetDir]);
 
   useInput((input, key) => {
-    if (key.escape || input === 'q' || input === 'E') navigate.pop();
+    if (key.escape || input === 'q') navigate.pop();
   });
 
   return h(Box, { flexDirection: 'column' },

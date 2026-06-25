@@ -20,7 +20,7 @@ export default function GateHistoryScreen({ targetDir, navigate }) {
   }, [targetDir]);
 
   useInput((input, key) => {
-    if (key.escape || input === 'q' || input === 'H') navigate.pop();
+    if (key.escape || input === 'q') navigate.pop();
   });
 
   return h(Box, { flexDirection: 'column' },
