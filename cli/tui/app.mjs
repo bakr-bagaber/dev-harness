@@ -19,7 +19,7 @@ import { useState, useEffect, createElement as h } from 'react';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
-  pushScreen, popScreen, getCurrentScreen, getNavStack,
+  pushScreen, popScreen, replaceScreen, getCurrentScreen, getNavStack,
   resetToScreen, clearStack, getScreenLoader, clearToast,
 } from './screens.mjs';
 import { Toast } from './components/Toast.mjs';
@@ -103,7 +103,7 @@ function TuiApp({ targetDir }) {
   const navigate = {
     push: (name, props) => { pushScreen(name, { targetDir, ...props }); setTick(t => t + 1); },
     pop: () => { popScreen(); setTick(t => t + 1); },
-    replace: (name, props) => { resetToScreen(name, { targetDir, ...props }); setTick(t => t + 1); },
+    replace: (name, props) => { replaceScreen(name, { targetDir, ...props }); setTick(t => t + 1); },
     exit: () => { clearStack(); exit(); },
   };
 

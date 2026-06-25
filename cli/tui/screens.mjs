@@ -15,6 +15,7 @@
 const SCREEN_LOADERS = {
   setup:      () => import('./screens/setup.mjs'),
   dashboard:  () => import('./screens/dashboard.mjs'),
+  advance:    () => import('./screens/advance.mjs'),
   status:     () => import('./screens/status.mjs'),
   'gate-fix': () => import('./screens/gate-fix.mjs'),
   'gate-config': () => import('./screens/gate-config.mjs'),
