@@ -10,12 +10,14 @@ import { showToast } from '../screens.mjs';
 export default function RollbackScreen({ targetDir, navigate }) {
   const [checkpoints, setCheckpoints] = useState([]);
   const [confirming, setConfirming] = useState(null);
+  const [cursor, setCursor] = useState(0);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     (async () => {
       const r = await listCheckpoints(targetDir);
       setCheckpoints(r.ok ? r.data : []);
+      setCursor(0);
     })();
   }, [targetDir, tick]);
 
@@ -23,6 +25,19 @@ export default function RollbackScreen({ targetDir, navigate }) {
     if (key.escape) {
       if (confirming) setConfirming(null);
       else navigate.pop();
+      return;
+    }
+    if (confirming) return; // ConfirmDialog handles its own keys
+    if (checkpoints.length === 0) return;
+    if (key.upArrow) setCursor(c => Math.max(0, c - 1));
+    if (key.downArrow) setCursor(c => Math.min(checkpoints.length - 1, c + 1));
+    if (input === 't') {
+      const sel = checkpoints[cursor];
+      if (sel) setConfirming({ action: 'to', ref: sel.ref });
+    }
+    if (input === 'b') {
+      const sel = checkpoints[cursor];
+      if (sel) setConfirming({ action: 'branch', ref: sel.ref });
     }
   });
 
@@ -45,14 +60,22 @@ export default function RollbackScreen({ targetDir, navigate }) {
 
   const content = checkpoints.length === 0
     ? 'No checkpoints found.\n\nCheckpoints are created automatically when auto-tagging is enabled,\nor manually with: dev-harness checkpoint create <label>'
-    : checkpoints.map(c => `${c.ref}\n  Type: ${c.type}  Date: ${c.date}  Hash: ${c.hash}`).join('\n\n');
+    : checkpoints.map((c, i) => {
+        const marker = i === cursor ? '▶ ' : '  ';
+        return `${marker}${c.ref}\n  Type: ${c.type}  Date: ${c.date}  Hash: ${c.hash}`;
+      }).join('\n\n');
 
   return h(Box, { flexDirection: 'column' },
     h(Text, { bold: true }, '╔══ Rollback Manager ══╗'),
     h(ScrollView, { content, height: 12 }),
     checkpoints.length > 0
-      ? h(Text, { dimColor: true }, 'Select a checkpoint from the list, then choose [t] restore or [b] branch')
+      ? h(Text, { dimColor: true }, `[↑↓] select  [t] restore  [b] branch`)
       : null,
-    h(StatusBar, { keys: [{ key: 'Esc', label: 'back' }] }),
+    h(StatusBar, { keys: [
+      { key: '↑↓', label: 'select' },
+      { key: 't', label: 'restore' },
+      { key: 'b', label: 'branch' },
+      { key: 'Esc', label: 'back' },
+    ] }),
   );
 }

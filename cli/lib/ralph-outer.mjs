@@ -12,7 +12,7 @@
  *   import { continuePipeline, runAutopilot } from './ralph-outer.mjs';
  *   const result = continuePipeline('/path/to/project', 'build');
  */
-import { loadConfig, transitionPhase, set as stateSet, getPhaseOrder } from './state.mjs';
+import { loadConfig, transitionPhase, set as stateSet, getPhaseOrder, getRetryConfig, incrementPhaseRetry, resetPhaseRetry } from './state.mjs';
 import { runPhase, loadFeatureList } from './ralph-inner.mjs';
 import { existsSync } from 'node:fs';
 import { execGit } from './git.mjs';
@@ -171,6 +171,90 @@ export async function continuePipeline(targetDir, completedPhase, options = {}) 
       ok: false,
       status: 'escalated',
       message: loopResult.message,
+      currentPhase: nextPhase,
+      nextPhase: null,
+      phasesRemaining,
+      details: loopResult.details,
+    };
+  }
+
+  // ── v3.1.0+ phase retry escalation ──────────────────────────────────────
+  // Inner loop signaled feature-exhausted (feature-iterate phases) or
+  // deliverable-exhausted (deliverable-retry phases). The outer loop owns
+  // phase retry: if retry.phases.enabled and under budget, reset all
+  // features in the phase + re-run same phase. Else escalate to human.
+  if (loopResult.status === 'feature-exhausted' || loopResult.status === 'deliverable-exhausted') {
+    const retryCfg = getRetryConfig(config);
+    const phaseRetryCount = config.phaseRetryCount ?? 0;
+
+    if (retryCfg.phases.enabled && phaseRetryCount < retryCfg.phases.maxRetries) {
+      // Phase retry: increment counter, reset all features in the phase,
+      // re-run same phase via the existing same-phase re-run path.
+      incrementPhaseRetry(config);
+      // Reset all features' passes + task statuses + retryCounts
+      try {
+        const fl = loadFeatureList(targetDir);
+        if (fl.ok !== false && Array.isArray(fl.features)) {
+          for (const feat of fl.features) {
+            feat.passes = false;
+            if (feat.retryCount !== undefined) { feat.retryCount = 0; }
+            for (const t of (feat.tasks || [])) {
+              t.status = 'pending';
+              if (t.retryCount !== undefined) { t.retryCount = 0; }
+            }
+          }
+          // Save feature list back
+          const { saveFeatureList } = await import('./ralph-inner.mjs');
+          saveFeatureList(targetDir, fl);
+        }
+      } catch (_e) { /* non-fatal */ }
+      // Reset task/feature retry counters
+      config.taskRetryCount = 0;
+      config.featureRetryCount = 0;
+      stateSet(targetDir, 'phaseRetryCount', config.phaseRetryCount);
+      stateSet(targetDir, 'taskRetryCount', 0);
+      stateSet(targetDir, 'featureRetryCount', 0);
+
+      if (!json && verbose) {
+        process.stdout.write(`\n  ↻ Phase retry (${config.phaseRetryCount}/${retryCfg.phases.maxRetries}) for "${nextPhase}". Resetting features and re-running.\n`);
+      }
+      // Re-run same phase (transitionPhase handles same-phase re-run)
+      const retrans = await transitionPhase(targetDir, nextPhase);
+      if (!retrans.ok) {
+        return {
+          ok: false,
+          status: 'error',
+          message: `Phase retry transition failed: ${retrans.error}`,
+          currentPhase: nextPhase,
+          phasesRemaining,
+        };
+      }
+      const reloop = await runPhase(targetDir, nextPhase, { json });
+      // Recurse to continue evaluating the re-run result
+      if (reloop.status === 'complete') {
+        return await continuePipeline(targetDir, nextPhase, options);
+      }
+      return {
+        ok: reloop.ok,
+        status: reloop.status,
+        message: reloop.message,
+        currentPhase: nextPhase,
+        nextPhase: null,
+        phasesRemaining,
+        details: reloop.details,
+      };
+    }
+
+    // Phase retry disabled or exhausted → escalate to human
+    stateSet(targetDir, 'paused', true);
+    if (!json && verbose) {
+      process.stdout.write(`\n  ✗ ${nextPhase.toUpperCase()} — ${loopResult.message}\n`);
+      process.stdout.write(`  Phase retry exhausted or disabled. Escalating to human. Pipeline paused.\n`);
+    }
+    return {
+      ok: false,
+      status: 'escalated',
+      message: `${loopResult.message} Phase retry ${retryCfg.phases.enabled ? `exhausted (${phaseRetryCount}/${retryCfg.phases.maxRetries})` : 'disabled'}. Pipeline paused.`,
       currentPhase: nextPhase,
       nextPhase: null,
       phasesRemaining,

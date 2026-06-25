@@ -70,6 +70,17 @@ export default function GateFixScreen({ targetDir, navigate, phase }) {
             navigate.push('contract');
             return;
           }
+          if (fix.action === 'show-git-status') {
+            showToast('Fix: commit or stash changes — run `git status` then `git add` + `git commit`, or `git stash`', 'info');
+            return;
+          }
+          if (fix.action === 'show-guidance') {
+            const guidance = failName === 'lint'
+              ? 'Fix linting: run your linter (e.g. `npm run lint`), resolve reported errors, then re-validate'
+              : 'Fix tests: run your test suite (e.g. `npm test`), fix failing tests, then re-validate';
+            showToast(guidance, 'info');
+            return;
+          }
         }
       }
     }

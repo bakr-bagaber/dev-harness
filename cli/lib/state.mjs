@@ -14,9 +14,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { validateAgainstSchema } from './validate-schema.mjs';
 import { getGitBranch, isGitClean, getLastCommitMessage, hasGitUpstream } from './git.mjs';
-import { CONFIG_SCHEMA_PATH, CONFIG_PATH } from './paths.mjs';
+import { CONFIG_SCHEMA_PATH, CONFIG_PATH, FEATURE_LIST_PATH } from './paths.mjs';
 import { PHASE_ORDER, getPhaseOrder, isValidTransition } from './phases.mjs';
-import { DEFAULT_MAX_RETRIES, COVERAGE_THRESHOLD_DEFAULT } from './constants.mjs';
+import { DEFAULT_MAX_RETRIES, DEFAULT_FEATURE_RETRIES, DEFAULT_PHASE_RETRIES, COVERAGE_THRESHOLD_DEFAULT } from './constants.mjs';
 
 // Re-export phase logic for backward compatibility (callers import from state.mjs).
 export { PHASE_ORDER, getPhaseOrder, isValidTransition };
@@ -70,8 +70,15 @@ export function getDefaultConfig() {
       },
     },
     maxRetries: DEFAULT_MAX_RETRIES,
+    retry: {
+      tasks:    { enabled: true,  maxRetries: null },  // null → fall back to legacy maxRetries
+      features: { enabled: false, maxRetries: DEFAULT_FEATURE_RETRIES },
+      phases:   { enabled: false, maxRetries: DEFAULT_PHASE_RETRIES },
+    },
     retryCount: 0,
     taskRetryCount: 0,
+    featureRetryCount: 0,
+    phaseRetryCount: 0,
     pipelineIteration: 0,
     gateHistory: [],
     supervisor: {
@@ -247,7 +254,7 @@ export function set(targetDir, key, value) {
  * @param {string} phase
  * @param {string} result — "pass" | "fail"
  */
-function recordGate(config, phase, result) {
+export function recordGate(config, phase, result) {
   if (!config.gateHistory) {config.gateHistory = [];}
   config.gateHistory.push({
     phase,
@@ -296,12 +303,17 @@ export async function transitionPhase(targetDir, toPhase) {
   // reset to 0 by validate when a task passes — so only actual failures
   // (where validate fails and agent re-runs the phase) accumulate retries.
   // For deliverable-retry phases, each re-run is a retry by definition.
+  // v3.1.0+: phaseRetryCount is the new per-phase counter (gated by
+  // retry.phases.enabled); retryCount is kept for backward compat.
   const isNewPhase = config.currentPhase !== toPhase;
   if (config.retryCount === undefined) {config.retryCount = 0;}
+  if (config.phaseRetryCount === undefined) {config.phaseRetryCount = 0;}
   if (isNewPhase) {
     config.retryCount = 0;
+    config.phaseRetryCount = 0;
   } else {
     config.retryCount = (config.retryCount || 0) + 1;
+    config.phaseRetryCount = (config.phaseRetryCount || 0) + 1;
   }
 
   // Update phase
@@ -342,4 +354,124 @@ export function validateConfig(cfg) {
     }
   }
   return missing;
+}
+
+// ── Retry helpers (v3.1.0+) ──────────────────────────────────────────────────
+// These helpers operate on an in-memory config object (already loaded by the
+// caller). Callers are responsible for saveConfig() after mutations.
+
+/**
+ * Resolve the effective retry configuration, seeding from the legacy
+ * `maxRetries` field for backward compatibility when the `retry` group is
+ * absent or incomplete.
+ * @param {object} config
+ * @returns {{ tasks: {enabled:boolean,maxRetries:number}, features: {enabled:boolean,maxRetries:number}, phases: {enabled:boolean,maxRetries:number} }}
+ */
+export function getRetryConfig(config) {
+  const legacy = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const r = config.retry ?? {};
+  return {
+    tasks: {
+      enabled: r.tasks?.enabled ?? true,
+      // null → fall back to legacy maxRetries for backward compatibility
+      maxRetries: r.tasks?.maxRetries ?? legacy,
+    },
+    features: {
+      enabled: r.features?.enabled ?? false,
+      maxRetries: r.features?.maxRetries ?? DEFAULT_FEATURE_RETRIES,
+    },
+    phases: {
+      enabled: r.phases?.enabled ?? false,
+      maxRetries: r.phases?.maxRetries ?? DEFAULT_PHASE_RETRIES,
+    },
+  };
+}
+
+/**
+ * Reset task retry state for a specific task (and the global taskRetryCount).
+ * @param {object} config
+ */
+export function resetTaskRetry(config) {
+  config.taskRetryCount = 0;
+}
+
+/**
+ * Increment the per-task retry counter.
+ * @param {object} config
+ * @returns {number} new value
+ */
+export function incrementTaskRetry(config) {
+  config.taskRetryCount = (config.taskRetryCount ?? 0) + 1;
+  return config.taskRetryCount;
+}
+
+/**
+ * Reset feature retry state for a feature (and the global featureRetryCount).
+ * @param {object} config
+ */
+export function resetFeatureRetry(config) {
+  config.featureRetryCount = 0;
+}
+
+/**
+ * Increment the per-feature retry counter.
+ * @param {object} config
+ * @returns {number} new value
+ */
+export function incrementFeatureRetry(config) {
+  config.featureRetryCount = (config.featureRetryCount ?? 0) + 1;
+  return config.featureRetryCount;
+}
+
+/**
+ * Reset phase retry state (and the legacy retryCount for backward compat).
+ * @param {object} config
+ */
+export function resetPhaseRetry(config) {
+  config.phaseRetryCount = 0;
+  config.retryCount = 0;
+}
+
+/**
+ * Increment the per-phase retry counter (and the legacy retryCount).
+ * @param {object} config
+ * @returns {number} new phaseRetryCount
+ */
+export function incrementPhaseRetry(config) {
+  config.phaseRetryCount = (config.phaseRetryCount ?? 0) + 1;
+  config.retryCount = (config.retryCount ?? 0) + 1;
+  return config.phaseRetryCount;
+}
+
+/**
+ * Recompute config.features.{remaining,passing,total} from feature_list.json
+ * so the status command shows live counts (fixes G10).
+ * @param {string} targetDir
+ * @param {object} [config] — optional pre-loaded config (avoids double read)
+ * @returns {{ ok: boolean, error: string|null }}
+ */
+export function syncFeatureSummary(targetDir, config) {
+  const cfg = config ?? loadConfig(targetDir).config;
+  if (!cfg) {return { ok: false, error: 'Cannot load config' };}
+  try {
+    const flPath = FEATURE_LIST_PATH(targetDir);
+    if (!existsSync(flPath)) {
+      cfg.features = cfg.features || {};
+      cfg.features.remaining = 0;
+      cfg.features.passing = 0;
+      cfg.features.total = 0;
+      return saveConfig(targetDir, cfg);
+    }
+    const fl = JSON.parse(readFileSync(flPath, 'utf8'));
+    const features = Array.isArray(fl.features) ? fl.features : [];
+    const total = features.length;
+    const passing = features.filter(f => f.passes === true).length;
+    cfg.features = cfg.features || {};
+    cfg.features.total = total;
+    cfg.features.passing = passing;
+    cfg.features.remaining = total - passing;
+    return saveConfig(targetDir, cfg);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }

@@ -34,7 +34,25 @@ export default function ContractScreen({ targetDir, navigate }) {
   useInput((input, key) => {
     if (key.escape) {
       if (mode === MODES.form) navigate.pop();
+      else if (mode === MODES.escalate) setMode(MODES.review);
       else setMode(MODES.form);
+      return;
+    }
+    // Review mode: a=agree, r=revise, e=escalate
+    if (mode === MODES.review) {
+      if (input === 'a') {
+        const r = reviewSprintContract(targetDir, { agreed: true });
+        showToast(r.ok ? 'Contract agreed' : r.message, r.ok ? 'success' : 'error');
+        if (r.ok) navigate.pop();
+      }
+      if (input === 'r') {
+        const r = reviewSprintContract(targetDir, { needsRevision: true });
+        showToast(r.ok ? 'Contract sent for revision' : r.message, r.ok ? 'warning' : 'error');
+        if (r.ok) setMode(MODES.form);
+      }
+      if (input === 'e') {
+        setMode(MODES.escalate);
+      }
     }
   });
 

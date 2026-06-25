@@ -117,6 +117,7 @@ export default function DashboardScreen({ targetDir, navigate }) {
 
     // Config
     if (input === 'g') { navigate.push('gate-config'); return; }
+    if (input === 'y') { navigate.push('retry-config', { targetDir }); return; }
     if (input === 't') { navigate.push('tool-select'); return; }
     if (input === 'm') {
       // Quick mode toggle

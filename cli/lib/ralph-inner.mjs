@@ -14,7 +14,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { loadConfig } from './state.mjs';
+import { loadConfig, getRetryConfig } from './state.mjs';
 import { validateAgainstSchema } from './validate-schema.mjs';
 import { gitHardResetClean } from './git.mjs';
 import { phaseLabel } from './command-helpers.mjs';
@@ -158,7 +158,9 @@ export async function runPhase(targetDir, phase, options = {}) {
   }
 
   const mode = config.mode ?? 'copilot';
-  const maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const retryCfg = getRetryConfig(config);
+  // For display/output backward compat — the primary task retry budget.
+  const maxRetries = retryCfg.tasks.maxRetries;
   const resetOnRetry = config.git?.resetOnRetry === true;
   const autoCommit = config.git?.autoCommit === true;
   const phaseType = getPhaseType(phase);
@@ -167,32 +169,70 @@ export async function runPhase(targetDir, phase, options = {}) {
     return { ok: false, status: 'error', message: `Unknown phase type for "${phase}"`, phase, iteration: 0, mode, details: {} };
   }
 
-  // Retry count check: escalate if retries exhausted
+  // ── v3.1.0+ 3-level retry escalation checks ──────────────────────────────
+  // Inner loop owns task + feature escalation. Phase escalation is the outer
+  // loop's job (signaled via 'feature-exhausted' / 'deliverable-exhausted').
   const retryCount = config.retryCount ?? 0;
-  if (retryCount >= maxRetries) {
-    return {
-      ok: false,
-      status: 'escalated',
-      message: `Retries exhausted (${retryCount}/${maxRetries}) for phase "${phase}". Escalating to human.`,
-      phase,
-      iteration: retryCount,
-      mode,
-      details: { retryCount, maxRetries },
-    };
-  }
-
-  // Task-level retry check: escalate if task retries exhausted
   const taskRetryCount = config.taskRetryCount ?? 0;
-  if (taskRetryCount >= maxRetries) {
-    return {
-      ok: false,
-      status: 'escalated',
-      message: `Task retries exhausted (${taskRetryCount}/${maxRetries}) for phase "${phase}". Escalating to human.`,
-      phase,
-      iteration: taskRetryCount,
-      mode,
-      details: { taskRetryCount, maxRetries, retryCount },
-    };
+  const featureRetryCount = config.featureRetryCount ?? 0;
+  const phaseRetryCount = config.phaseRetryCount ?? 0;
+
+  if (phaseType === 'feature-iterate') {
+    // Task level
+    if (retryCfg.tasks.enabled && taskRetryCount >= retryCfg.tasks.maxRetries) {
+      // Task exhausted → feature level
+      if (retryCfg.features.enabled && featureRetryCount >= retryCfg.features.maxRetries) {
+        // Feature exhausted → signal outer loop (do NOT escalate to human here)
+        return {
+          ok: false,
+          status: 'feature-exhausted',
+          message: `Feature retries exhausted (${featureRetryCount}/${retryCfg.features.maxRetries}) for phase "${phase}" after task retries (${taskRetryCount}/${retryCfg.tasks.maxRetries}). Signaling outer loop for phase retry or escalation.`,
+          phase,
+          iteration: featureRetryCount,
+          mode,
+          details: { taskRetryCount, featureRetryCount, phaseRetryCount, retryCfg },
+        };
+      }
+      if (!retryCfg.features.enabled) {
+        // Feature retry disabled → signal outer loop immediately
+        return {
+          ok: false,
+          status: 'feature-exhausted',
+          message: `Task retries exhausted (${taskRetryCount}/${retryCfg.tasks.maxRetries}) for phase "${phase}" and feature retry is disabled. Signaling outer loop for phase retry or escalation.`,
+          phase,
+          iteration: taskRetryCount,
+          mode,
+          details: { taskRetryCount, featureRetryCount, phaseRetryCount, retryCfg },
+        };
+      }
+      // Feature retry still has budget — fall through; the validate command
+      // handles the feature reset + re-sweep on the next iteration.
+    }
+  } else {
+    // Deliverable-retry phase → phase-level retry only
+    if (retryCfg.phases.enabled && phaseRetryCount >= retryCfg.phases.maxRetries) {
+      return {
+        ok: false,
+        status: 'deliverable-exhausted',
+        message: `Phase retries exhausted (${phaseRetryCount}/${retryCfg.phases.maxRetries}) for deliverable phase "${phase}". Signaling outer loop for escalation.`,
+        phase,
+        iteration: phaseRetryCount,
+        mode,
+        details: { phaseRetryCount, retryCount, retryCfg },
+      };
+    }
+    if (!retryCfg.phases.enabled && retryCount >= retryCfg.tasks.maxRetries) {
+      // Legacy path: phases retry disabled, use retryCount vs maxRetries
+      return {
+        ok: false,
+        status: 'deliverable-exhausted',
+        message: `Retries exhausted (${retryCount}/${retryCfg.tasks.maxRetries}) for deliverable phase "${phase}" and phase retry is disabled. Signaling outer loop for escalation.`,
+        phase,
+        iteration: retryCount,
+        mode,
+        details: { retryCount, phaseRetryCount, retryCfg },
+      };
+    }
   }
 
   // ── Opt-in git ops: fresh context on retry ──────────────────────────────
@@ -261,6 +301,10 @@ export async function runPhase(targetDir, phase, options = {}) {
           taskDescription: task.description,
           phaseType,
           maxRetries,
+          retry: retryCfg,
+          taskRetryCount: config.taskRetryCount ?? 0,
+          featureRetryCount: config.featureRetryCount ?? 0,
+          phaseRetryCount: config.phaseRetryCount ?? 0,
           resetOnRetry,
           autoCommit,
           gitOps,
@@ -302,6 +346,9 @@ export async function runPhase(targetDir, phase, options = {}) {
       details: {
         phaseType,
         maxRetries,
+        retry: retryCfg,
+        retryCount: config.retryCount ?? 0,
+        phaseRetryCount: config.phaseRetryCount ?? 0,
         resetOnRetry,
         autoCommit,
         instructions: output,

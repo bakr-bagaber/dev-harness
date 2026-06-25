@@ -33,6 +33,12 @@
             "default": false,
             "description": "All tasks completed and verified"
           },
+          "retryCount": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Per-feature retry counter (v3.1.0+). Reset to 0 when the feature passes, incremented when a task exhausts task-retries. Mirrors config.featureRetryCount for the currently-active feature."
+          },
           "tasks": {
             "type": "array",
             "items": {

@@ -10,9 +10,21 @@
 
 /** Default max retries per task before escalating to human.
  *  Retry scope is per-task (not per-phase) — each task gets its own retry budget.
- *  Configurable via: dev-harness config set maxRetries <N>
+ *  Configurable via: dev-harness config set retry.tasks.maxRetries <N>
+ *  (Legacy alias: config set maxRetries <N>)
  */
 export const DEFAULT_MAX_RETRIES = 10;
+
+/** Default max retries per feature before falling through to phase retry (v3.1.0+).
+ *  Configurable via: dev-harness config set retry.features.maxRetries <N>
+ */
+export const DEFAULT_FEATURE_RETRIES = 2;
+
+/** Default max retries per phase before escalating to human (v3.1.0+).
+ *  Also governs deliverable-retry phases (init/define/plan/review/ship).
+ *  Configurable via: dev-harness config set retry.phases.maxRetries <N>
+ */
+export const DEFAULT_PHASE_RETRIES = 2;
 
 /** Timeout (ms) for standard git/shell commands. */
 export const COMMAND_TIMEOUT = 30000;

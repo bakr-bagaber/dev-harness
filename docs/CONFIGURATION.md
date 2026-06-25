@@ -30,13 +30,39 @@ dev-harness config get
 |-----|------|---------|-------------|
 | `mode` | enum | `copilot` | Execution mode: `copilot` (manual phase runs) or `autopilot` (auto-advance after gates pass) |
 | `paused` | boolean | `false` | Autopilot pause state. Set via `dev-harness pause` / `dev-harness resume` |
-| `maxRetries` | integer | `10` | Max retry attempts per task before escalating to human |
-| `taskRetryCount` | integer | `0` | Per-task retry counter (managed automatically — reset on success, incremented on failure) |
+| `maxRetries` | integer | `10` | (Deprecated fallback) Max retry attempts. Prefer the `retry.*.maxRetries` fields below. If `retry` group is absent, this value seeds `retry.tasks.maxRetries` for backward compatibility. |
 
 **Examples:**
 ```bash
 dev-harness config set mode autopilot
-dev-harness config set maxRetries 5
+dev-harness config set maxRetries 5   # legacy — prefer retry.tasks.maxRetries
+```
+
+### Retry (v3.1.0+)
+
+Three independently-toggleable retry levels with the escalation chain **task → feature → phase → human**. Each level has its own `enabled` flag and `maxRetries` budget. Defaults preserve prior behavior (tasks enabled, features/phases disabled).
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `retry.tasks.enabled` | boolean | `true` | Enable per-task retry (feature-iterate phases). On task gate failure, retry the same task up to `retry.tasks.maxRetries` times. |
+| `retry.tasks.maxRetries` | integer | `10` | Max task retry attempts before falling through to feature retry (or escalating if feature retry disabled). |
+| `retry.features.enabled` | boolean | `false` | Enable per-feature retry. When a task exhausts task-retries (or task-retry is disabled), reset the feature's tasks and re-sweep from the first task, up to `retry.features.maxRetries` times. |
+| `retry.features.maxRetries` | integer | `2` | Max feature retry attempts before falling through to phase retry (or escalating if phase retry disabled). |
+| `retry.phases.enabled` | boolean | `false` | Enable per-phase retry. When a feature exhausts feature-retries (or feature-retry is disabled), reset all features in the phase and re-run the phase, up to `retry.phases.maxRetries` times. Also governs deliverable-retry phases (init/define/plan/review/ship). |
+| `retry.phases.maxRetries` | integer | `2` | Max phase retry attempts before escalating to human (`paused` + `status: escalated`). |
+
+**Examples:**
+```bash
+# Enable feature-level retry with a budget of 3
+dev-harness config set retry.features.enabled true
+dev-harness config set retry.features.maxRetries 3
+
+# Disable task retry entirely (any task failure falls through to feature/phase retry)
+dev-harness config set retry.tasks.enabled false
+
+# Enable all three levels (full escalation chain)
+dev-harness config set retry.features.enabled true
+dev-harness config set retry.phases.enabled true
 ```
 
 ### Stack
@@ -134,8 +160,10 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 | Key | Type | Description |
 |-----|------|-------------|
 | `currentPhase` | string | Current pipeline phase |
-| `retryCount` | integer | Phase-level retry count |
+| `retryCount` | integer | (Legacy) phase-level retry count — superseded by `phaseRetryCount` for the new 3-level model; kept for backward compat / deliverable-retry phases. |
 | `taskRetryCount` | integer | Per-task retry count (reset on task success) |
+| `featureRetryCount` | integer | Per-feature retry count (reset when feature passes) — v3.1.0+ |
+| `phaseRetryCount` | integer | Per-phase retry count (reset on new phase) — v3.1.0+ |
 | `pipelineIteration` | integer | Pipeline completion count |
 | `gateHistory` | array | Gate pass/fail history |
 | `features.remaining` | integer | Incomplete features count |

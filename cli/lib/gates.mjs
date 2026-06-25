@@ -449,6 +449,15 @@ export function getPhaseChecks(phase) {
 /**
  * Run all checks for a given phase.
  *
+ * When `options.feature` + `options.task` are provided (per-task validation,
+ * called by the inner loop), checks are scoped to task-applicable checks only
+ * (lint, tests, coverage) — phase-level checks like git-clean and
+ * contract-agreed are skipped. This fixes G1: previously gates always ran at
+ * phase granularity regardless of --feature/--task.
+ *
+ * Gate results (pass or fail) are recorded to config.gateHistory (fixes G9:
+ * previously only 'pass' was ever recorded).
+ *
  * @param {string} targetDir
  * @param {string} phase
  * @param {object} [options]
@@ -457,17 +466,58 @@ export function getPhaseChecks(phase) {
  * @returns {{ phase: string, checks: Array<{name:string,pass:boolean,detail:string}>, overall: boolean, failures: string[], feature?: string, task?: string }}
  */
 export async function runChecks(targetDir, phase, options = {}) {
-  const checks = getPhaseChecks(phase);
+  let checks = getPhaseChecks(phase);
+
+  // G1 fix: per-task gate scoping. When validating a single task, run only
+  // task-applicable checks (lint, tests, coverage). Skip phase-level checks
+  // (git-clean, contract-agreed, branch-up-to-date, rubric, readme, etc.)
+  // which are evaluated at phase-gate time, not per-task.
+  const isTaskScoped = !!(options.feature && options.task);
+  if (isTaskScoped) {
+    const TASK_CHECK_NAMES = new Set(['lint', 'tests', 'coverage']);
+    checks = checks.filter(fn => {
+      // Probe the check by running it against a sentinel — each check fn
+      // returns { name, pass, detail }. We filter by name prefix.
+      // Cheaper: tag checks by name via a dry probe is wasteful; instead
+      // we inspect the function's declared name (checkLint → 'lint').
+      const declared = fn.name || '';
+      const short = declared.replace(/^check/, '').replace(/^[A-Z]/, c => c.toLowerCase());
+      return TASK_CHECK_NAMES.has(short);
+    });
+  }
+
   const results = await Promise.all(checks.map(fn => fn(targetDir)));
   const failures = results.filter(r => !r.pass).map(r => r.name);
+  const overall = failures.length === 0;
   const result = {
     phase,
     checks: results,
-    overall: failures.length === 0,
+    overall,
     failures,
   };
   if (options.feature) { result.feature = options.feature; }
   if (options.task) { result.task = options.task; }
+
+  // G9 fix: record gate result (pass OR fail) to gateHistory.
+  try {
+    const { config, ok } = loadConfig(targetDir);
+    if (ok) {
+      if (!config.gateHistory) { config.gateHistory = []; }
+      config.gateHistory.push({
+        phase,
+        result: overall ? 'pass' : 'fail',
+        timestamp: new Date().toISOString(),
+        ...(options.feature ? { feature: options.feature } : {}),
+        ...(options.task ? { task: options.task } : {}),
+      });
+      // Save back — use saveConfig from state.mjs (lazy to avoid circular).
+      const { saveConfig } = await import('./state.mjs');
+      saveConfig(targetDir, config);
+    }
+  } catch (_e) {
+    // Non-fatal: gate history is best-effort; never break validation.
+  }
+
   return result;
 }
 

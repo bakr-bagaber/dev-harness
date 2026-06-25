@@ -19,7 +19,7 @@
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { runChecks, getPhase, areGatesEnabled } from '../lib/gates.mjs';
-import { loadConfig, set as configSet } from '../lib/state.mjs';
+import { loadConfig, set as configSet, syncFeatureSummary, resetTaskRetry, resetFeatureRetry } from '../lib/state.mjs';
 import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { loadFeatureList, saveFeatureList, runPhase, getNextFeature, getNextTask } from '../lib/ralph-inner.mjs';
 import { phaseLabel } from '../lib/command-helpers.mjs';
@@ -97,12 +97,32 @@ export default async function validateCommand(args) {
     if (!result.overall && feature && task) {
       const { config: failConfig } = loadConfig(targetDir);
       const currentTaskRetry = (failConfig.taskRetryCount ?? 0) + 1;
-      const maxRetries = failConfig.maxRetries ?? 10;
+      const { getRetryConfig, incrementFeatureRetry } = await import('../lib/state.mjs');
+      const retryCfg = getRetryConfig(failConfig);
+      const taskMax = retryCfg.tasks.maxRetries;
       configSet(targetDir, 'taskRetryCount', currentTaskRetry);
-      out.taskRetry = { attempt: currentTaskRetry, maxRetries };
-      if (currentTaskRetry >= maxRetries) {
+      out.taskRetry = { attempt: currentTaskRetry, maxRetries: taskMax, retry: retryCfg };
+      // When task retries exhausted, escalate to feature retry (if enabled)
+      if (currentTaskRetry >= taskMax && retryCfg.features.enabled) {
+        const currentFeatureRetry = incrementFeatureRetry(loadConfig(targetDir).config);
+        configSet(targetDir, 'featureRetryCount', currentFeatureRetry);
+        out.featureRetry = { attempt: currentFeatureRetry, maxRetries: retryCfg.features.maxRetries };
+        // Reset the feature's tasks for re-sweep
+        const fl = loadFeatureList(targetDir);
+        const feat = fl.features ? fl.features.find(f => f.id === feature) : null;
+        if (feat) {
+          if (feat.retryCount !== undefined) { feat.retryCount = currentFeatureRetry; }
+          for (const tk of (feat.tasks || [])) {
+            if (tk.status !== 'complete') { tk.status = 'pending'; }
+            if (tk.retryCount !== undefined) { tk.retryCount = 0; }
+          }
+          saveFeatureList(targetDir, fl);
+        }
+        configSet(targetDir, 'taskRetryCount', 0);
+      } else if (currentTaskRetry >= taskMax) {
+        // Task exhausted + feature retry disabled → pause; outer loop escalates
         configSet(targetDir, 'paused', true);
-        out.escalated = { task, retries: currentTaskRetry, maxRetries };
+        out.escalated = { task, retries: currentTaskRetry, maxRetries: taskMax };
       }
     }
 
@@ -113,15 +133,19 @@ export default async function validateCommand(args) {
       const t = feat && feat.tasks ? feat.tasks.find(tk => tk.id === task) : null;
       if (t) {
         t.status = 'complete';
-        // If all tasks in feature done, mark feature passing
+        // If all tasks in feature done, mark feature passing + reset feature retry
         if (feat.tasks.every(tk => tk.status === 'complete')) {
           feat.passes = true;
+          if (feat.retryCount !== undefined) { feat.retryCount = 0; }
+          resetFeatureRetry(loadConfig(targetDir).config);
         }
         saveFeatureList(targetDir, fl);
       }
       // Successful task validation resets retry counts (this was a success, not a retry)
       configSet(targetDir, 'retryCount', 0);
       configSet(targetDir, 'taskRetryCount', 0);
+      // G10 fix: sync config.features summary so status shows live counts
+      syncFeatureSummary(targetDir);
       // Get next task/feature instructions
       const nextResult = await runPhase(targetDir, phase, { json: true });
       out.nextTask = {
@@ -175,14 +199,31 @@ export default async function validateCommand(args) {
   if (!result.overall && feature && task) {
     const { config: failConfig } = loadConfig(targetDir);
     const currentTaskRetry = (failConfig.taskRetryCount ?? 0) + 1;
-    const maxRetries = failConfig.maxRetries ?? 10;
+    const { getRetryConfig, incrementFeatureRetry } = await import('../lib/state.mjs');
+    const retryCfg = getRetryConfig(failConfig);
+    const taskMax = retryCfg.tasks.maxRetries;
     configSet(targetDir, 'taskRetryCount', currentTaskRetry);
-    if (currentTaskRetry >= maxRetries) {
-      emitHuman(`\n  ✗ Task "${task}" failed ${currentTaskRetry}/${maxRetries} times. Escalating to human.\n`);
+    if (currentTaskRetry >= taskMax && retryCfg.features.enabled) {
+      const currentFeatureRetry = incrementFeatureRetry(loadConfig(targetDir).config);
+      configSet(targetDir, 'featureRetryCount', currentFeatureRetry);
+      emitHuman(`\n  ↻ Task "${task}" exhausted task retries (${currentTaskRetry}/${taskMax}). Feature retry ${currentFeatureRetry}/${retryCfg.features.maxRetries}. Resetting feature tasks.\n`);
+      const fl = loadFeatureList(targetDir);
+      const feat = fl.features ? fl.features.find(f => f.id === feature) : null;
+      if (feat) {
+        if (feat.retryCount !== undefined) { feat.retryCount = currentFeatureRetry; }
+        for (const tk of (feat.tasks || [])) {
+          if (tk.status !== 'complete') { tk.status = 'pending'; }
+          if (tk.retryCount !== undefined) { tk.retryCount = 0; }
+        }
+        saveFeatureList(targetDir, fl);
+      }
+      configSet(targetDir, 'taskRetryCount', 0);
+    } else if (currentTaskRetry >= taskMax) {
+      emitHuman(`\n  ✗ Task "${task}" failed ${currentTaskRetry}/${taskMax} times. Escalating to human.\n`);
       emitHuman(`  Run: dev-harness phase ${phase} to retry, or fix the task manually.\n`);
       configSet(targetDir, 'paused', true);
     } else {
-      emitHuman(`\n  ↻ Task "${task}" failed (${currentTaskRetry}/${maxRetries}). Retry with fresh context.\n`);
+      emitHuman(`\n  ↻ Task "${task}" failed (${currentTaskRetry}/${taskMax}). Retry with fresh context.\n`);
     }
   }
 
@@ -205,6 +246,8 @@ export default async function validateCommand(args) {
     // Successful task validation resets retry counts (this was a success, not a retry)
     configSet(targetDir, 'retryCount', 0);
     configSet(targetDir, 'taskRetryCount', 0);
+    // G10 fix: sync config.features summary so status shows live counts
+    syncFeatureSummary(targetDir);
     // Render updated dashboard showing task completion + next task
     renderDashboard(targetDir);
     // Run inner loop to get next feature/task instructions

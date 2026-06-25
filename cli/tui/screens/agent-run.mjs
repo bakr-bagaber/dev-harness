@@ -11,7 +11,7 @@ import { Text, Box, useInput } from 'ink';
 import { ScrollView } from '../components/ScrollView.mjs';
 import { StatusBar } from '../components/StatusBar.mjs';
 import { Badge } from '../components/Badge.mjs';
-import { getConfig, getPipelineStatus } from '../actions.mjs';
+import { getConfig, getPipelineStatus, setConfig } from '../actions.mjs';
 import { showToast } from '../screens.mjs';
 
 export default function AgentRunScreen({ targetDir, navigate }) {
@@ -19,6 +19,7 @@ export default function AgentRunScreen({ targetDir, navigate }) {
   const [output, setOutput] = useState([]);
   const [pipelineStatus, setPipelineStatus] = useState(null);
   const [error, setError] = useState(null);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     // Check pre-flight
@@ -84,6 +85,13 @@ export default function AgentRunScreen({ targetDir, navigate }) {
   useInput((input, key) => {
     if (key.escape || input === 'q') {
       navigate.pop();
+      return;
+    }
+    if (input === 'p') {
+      const newPaused = !paused;
+      setPaused(newPaused);
+      setConfig(targetDir, 'paused', newPaused);
+      showToast(newPaused ? 'Pipeline paused' : 'Pipeline resumed', newPaused ? 'warning' : 'success');
     }
   });
 
@@ -105,7 +113,7 @@ export default function AgentRunScreen({ targetDir, navigate }) {
       h(ScrollView, { content: output.join('\n'), height: 15 }),
     ),
     h(StatusBar, { keys: [
-      { key: 'p', label: 'pause' },
+      { key: 'p', label: paused ? 'resume' : 'pause' },
       { key: 'Esc', label: 'back' },
       { key: 'q', label: 'quit' },
     ] }),

@@ -202,7 +202,7 @@ See the [README TUI section](../README.md#️-live-tui-dashboard) for full detai
 3. Spawns agent with fresh session (per tool's spawn adapter)
 4. Monitors process: success → validate; failure → retry; API error → backoff
 5. On validation pass: marks task complete, advances to next task
-6. On validation fail: increments `taskRetryCount`, retries (up to `maxRetries`)
+6. On validation fail: follows the 3-level retry escalation chain (task → feature → phase → human), each level toggleable via `retry.*.enabled` with its own `retry.*.maxRetries` budget. See [CONFIGURATION.md](CONFIGURATION.md#retry-v310) and ADR 2026-06-25 in `history/decisions.md`.
 7. Renders live dashboard on every transition
 8. Graceful shutdown on Ctrl+C (pauses pipeline, saves state)
 

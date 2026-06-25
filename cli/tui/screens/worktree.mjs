@@ -13,12 +13,14 @@ export default function WorktreeScreen({ targetDir, navigate }) {
   const [mode, setMode] = useState('list');
   const [name, setName] = useState('');
   const [removing, setRemoving] = useState(null);
+  const [cursor, setCursor] = useState(0);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     (async () => {
       const r = await listWorktrees(targetDir);
       setWorktrees(r.ok ? r.data : []);
+      setCursor(0);
     })();
   }, [targetDir, tick]);
 
@@ -26,10 +28,17 @@ export default function WorktreeScreen({ targetDir, navigate }) {
     if (key.escape) {
       if (mode === 'list') navigate.pop();
       else setMode('list');
+      return;
     }
     if (mode === 'list') {
       if (input === 'c') setMode('create');
       if (input === 'p') setMode('prune');
+      if (key.upArrow) setCursor(c => Math.max(0, c - 1));
+      if (key.downArrow) setCursor(c => Math.max(0, Math.min(worktrees.length - 1, c + 1)));
+      if (input === 'x') {
+        const sel = worktrees[cursor];
+        if (sel) setRemoving(sel.path || sel.branch);
+      }
     }
   });
 
@@ -77,14 +86,19 @@ export default function WorktreeScreen({ targetDir, navigate }) {
 
   const content = worktrees.length === 0
     ? 'No worktrees found.'
-    : worktrees.map(w => `${w.path}\n  Branch: ${w.branch}\n  Hash: ${w.hash}`).join('\n\n');
+    : worktrees.map((w, i) => {
+        const marker = i === cursor ? '▶ ' : '  ';
+        return `${marker}${w.path}\n  Branch: ${w.branch}\n  Hash: ${w.hash}`;
+      }).join('\n\n');
 
   return h(Box, { flexDirection: 'column' },
     h(Text, { bold: true }, '╔══ Worktree Manager ══╗'),
     h(ScrollView, { content, height: 12 }),
     h(StatusBar, { keys: [
       { key: 'c', label: 'create' },
+      { key: 'x', label: 'remove' },
       { key: 'p', label: 'prune' },
+      { key: '↑↓', label: 'select' },
       { key: 'Esc', label: 'back' },
     ] }),
   );

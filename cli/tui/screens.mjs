@@ -18,6 +18,7 @@ const SCREEN_LOADERS = {
   status:     () => import('./screens/status.mjs'),
   'gate-fix': () => import('./screens/gate-fix.mjs'),
   'gate-config': () => import('./screens/gate-config.mjs'),
+  'retry-config': () => import('./screens/retry-config.mjs'),
   contract:   () => import('./screens/contract.mjs'),
   'contract-view': () => import('./screens/contract-view.mjs'),
   'agent-run': () => import('./screens/agent-run.mjs'),

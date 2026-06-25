@@ -109,13 +109,65 @@
     "maxRetries": {
       "type": "integer",
       "minimum": 1,
-      "default": 10
+      "default": 10,
+      "description": "(Deprecated fallback) Max retry attempts. Prefer retry.*.maxRetries. If the retry group is absent, this value seeds retry.tasks.maxRetries for backward compatibility."
+    },
+    "retry": {
+      "type": "object",
+      "description": "Three-level retry configuration (v3.1.0+). Escalation chain: task → feature → phase → human. Each level independently toggleable with its own maxRetries budget.",
+      "properties": {
+        "tasks": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true, "description": "Enable per-task retry (feature-iterate phases)." },
+            "maxRetries": { "type": "integer", "minimum": 1, "default": 10, "description": "Max task retry attempts before falling through to feature retry." }
+          }
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false, "description": "Enable per-feature retry. Resets the feature's tasks and re-sweeps from the first task." },
+            "maxRetries": { "type": "integer", "minimum": 1, "default": 2, "description": "Max feature retry attempts before falling through to phase retry." }
+          }
+        },
+        "phases": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false, "description": "Enable per-phase retry. Resets all features in the phase and re-runs it. Also governs deliverable-retry phases (init/define/plan/review/ship)." },
+            "maxRetries": { "type": "integer", "minimum": 1, "default": 2, "description": "Max phase retry attempts before escalating to human." }
+          }
+        }
+      }
+    },
+    "retryCount": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "(Legacy) phase-level retry counter — superseded by phaseRetryCount for the new 3-level model; kept for backward compat / deliverable-retry phases."
     },
     "taskRetryCount": {
       "type": "integer",
       "minimum": 0,
       "default": 0,
-      "description": "Per-task retry counter. Reset to 0 on task success, incremented on task failure. Escalates when >= maxRetries."
+      "description": "Per-task retry counter. Reset to 0 on task success, incremented on task failure. Escalates when >= retry.tasks.maxRetries."
+    },
+    "featureRetryCount": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Per-feature retry counter (v3.1.0+). Reset to 0 when the feature passes, incremented when a task exhausts task-retries. Escalates when >= retry.features.maxRetries."
+    },
+    "phaseRetryCount": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Per-phase retry counter (v3.1.0+). Reset to 0 on new phase, incremented when a feature exhausts feature-retries. Escalates when >= retry.phases.maxRetries."
+    },
+    "pipelineIteration": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Pipeline completion count. Increments only when the pipeline truly completes (no nextPhase AND no phase retry pending)."
     },
     "supervisor": {
       "type": "object",
