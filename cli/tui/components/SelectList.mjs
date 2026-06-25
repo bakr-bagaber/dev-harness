@@ -3,6 +3,8 @@
  *
  * Renders a list of options with labels + optional descriptions.
  * Supports search/filter, arrow keys, Enter to select, Esc to cancel.
+ * Implements windowed scrolling: shows a viewport of items that follows
+ * the cursor, so long lists (31+ stacks, 18+ tools) are fully navigable.
  *
  * Props:
  *   items: array<{ label: string, description?: string, value: any }>
@@ -10,14 +12,17 @@
  *   onCancel: () => void  (Esc)
  *   searchable?: boolean (default true)
  *   title?: string
+ *   viewportHeight?: number (default 15 — max items visible at once)
+ *   initialCursor?: number
  */
 import { useInput } from 'ink';
 import { Text, Box } from 'ink';
 import React, { useState } from 'react';
 
 const h = React.createElement;
+const DEFAULT_VIEWPORT = 15;
 
-export function SelectList({ items, onSelect, onCancel, searchable = true, title, initialCursor = 0 }) {
+export function SelectList({ items, onSelect, onCancel, searchable = true, title, initialCursor = 0, viewportHeight = DEFAULT_VIEWPORT }) {
   const [cursor, setCursor] = useState(initialCursor);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -29,6 +34,17 @@ export function SelectList({ items, onSelect, onCancel, searchable = true, title
     : items;
 
   const safeCursor = filtered.length > 0 ? Math.min(cursor, filtered.length - 1) : 0;
+
+  // Windowed scrolling: compute the visible slice based on cursor position.
+  // The viewport follows the cursor, scrolling down when cursor passes the
+  // bottom edge and up when it passes the top edge.
+  const total = filtered.length;
+  const half = Math.floor(viewportHeight / 2);
+  let start = Math.max(0, safeCursor - half);
+  let end = Math.min(total, start + viewportHeight);
+  // Re-adjust start if we hit the bottom (show as many as possible)
+  start = Math.max(0, end - viewportHeight);
+  const visible = filtered.slice(start, end);
 
   useInput((input, key) => {
     if (searching) {
@@ -69,11 +85,15 @@ export function SelectList({ items, onSelect, onCancel, searchable = true, title
       : searchable
         ? h(Text, { dimColor: true }, 'Press / to search')
         : null,
-    h(Box, { flexDirection: 'column', marginTop: 1 },
+    // Scroll indicators
+    start > 0
+      ? h(Text, { dimColor: true }, `  ↑ ${start} more above`)
+      : null,
+    h(Box, { flexDirection: 'column', marginTop: 0 },
       filtered.length === 0
         ? h(Text, { dimColor: true }, 'No matches')
-        : filtered.slice(0, 15).map((item, i) => {
-            const idx = i;
+        : visible.map((item, i) => {
+            const idx = start + i;
             const isSelected = idx === safeCursor;
             return h(Box, { key: idx },
               h(Text, { color: isSelected ? 'cyan' : undefined },
@@ -86,5 +106,8 @@ export function SelectList({ items, onSelect, onCancel, searchable = true, title
             );
           }),
     ),
+    end < total
+      ? h(Text, { dimColor: true }, `  ↓ ${total - end} more below`)
+      : null,
   );
 }

@@ -2,6 +2,20 @@
  * Help text builder — centralized to keep all formatting in one place.
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// Read version from package.json (single source of truth) so it never drifts.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+let VERSION = '0.0.0';
+try {
+  const pkgPath = resolve(__dirname, '..', '..', 'package.json');
+  VERSION = JSON.parse(readFileSync(pkgPath, 'utf-8')).version || '0.0.0';
+} catch (_e) {
+  // Fallback if package.json unavailable (shouldn't happen in normal install)
+}
+
 const USAGE = `Usage: dev-harness [command] [options]
 
 💡 Run "dev-harness" with NO arguments for the interactive TUI (recommended for humans).
@@ -57,8 +71,6 @@ Exit codes:
   1  Validation failure (gate check failed)
   2  Usage error (bad arguments)
   3  Internal error`;
-
-const VERSION = '3.0.0';
 
 // Help text for JSON output
 function buildJsonHelp() {

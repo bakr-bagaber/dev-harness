@@ -1,6 +1,9 @@
 /**
  * tool-registry — Central registry of all supported agentic coding tools.
  *
+ * Approved tools (2026-06-25): Claude Code, Codex, Antigravity, Cursor,
+ * OpenCode, Hermes, OpenClaw. Plus `generic` as the default fallback.
+ *
  * Maps each tool to:
  *   - file: the tool-specific file to generate (or null if tool reads AGENTS.md natively)
  *   - header: optional prefix prepended to AGENTS.md content when generating tool file
@@ -29,7 +32,7 @@
 
 /** @type {Record<string, ToolEntry>} */
 export const TOOL_REGISTRY = {
-  // ── AGENTS.md-native tools (no extra file needed) ────────────────────────
+  // ── Default fallback (AGENTS.md only, works with any tool) ───────────────
   'generic': {
     label: 'Generic',
     file: null,
@@ -37,6 +40,10 @@ export const TOOL_REGISTRY = {
     detectionFiles: [],
     notes: 'Default — AGENTS.md only. Works with any tool that reads AGENTS.md.',
   },
+
+  // ── Approved tools (2026-06-25) ──────────────────────────────────────────
+
+  // AGENTS.md-native tools (no extra file needed)
   'codex': {
     label: 'Codex CLI',
     file: null,
@@ -51,22 +58,22 @@ export const TOOL_REGISTRY = {
     detectionFiles: [],
     notes: 'OpenCode reads AGENTS.md natively.',
   },
-  'continue': {
-    label: 'Continue',
+  'antigravity': {
+    label: 'Antigravity 2',
     file: null,
     header: null,
-    detectionFiles: ['.continue/config.json', 'continue.json'],
-    notes: 'Continue reads AGENTS.md from project root.',
+    detectionFiles: ['.antigravity'],
+    notes: 'Antigravity 2 (IDE/CLI/SDK) — reads AGENTS.md.',
   },
-  'aider': {
-    label: 'Aider',
+  'openclaw': {
+    label: 'OpenClaw',
     file: null,
     header: null,
-    detectionFiles: ['.aider.conf.yml', '.aider.conf.yaml', '.aider.conf.json'],
-    notes: 'Aider auto-discovers AGENTS.md (or via --read CONVENTIONS.md).',
+    detectionFiles: ['.openclaw'],
+    notes: 'OpenClaw — reads AGENTS.md.',
   },
 
-  // ── Tools with a specific rules file (generated from AGENTS.md content) ──
+  // Tools with a specific rules file (generated from AGENTS.md content)
   'claude-code': {
     label: 'Claude Code',
     file: 'CLAUDE.md',
@@ -81,80 +88,8 @@ export const TOOL_REGISTRY = {
     detectionFiles: ['.cursorrules', '.cursor/rules'],
     notes: 'Cursor reads .cursorrules as system context.',
   },
-  'windsurf': {
-    label: 'Windsurf',
-    file: '.windsurfrules',
-    header: '# Windsurf rules — mirrors AGENTS.md\n',
-    detectionFiles: ['.windsurfrules'],
-    notes: 'Windsurf (Codeium) reads .windsurfrules.',
-  },
-  'gemini': {
-    label: 'Gemini CLI',
-    file: 'GEMINI.md',
-    header: '> Read by Gemini CLI. Mirrors AGENTS.md.\n',
-    detectionFiles: ['GEMINI.md'],
-    notes: 'Google Gemini CLI reads GEMINI.md.',
-  },
-  'copilot': {
-    label: 'GitHub Copilot',
-    file: '.github/copilot-instructions.md',
-    header: '# GitHub Copilot instructions — mirrors AGENTS.md\n',
-    detectionFiles: ['.github/copilot-instructions.md'],
-    notes: 'GitHub Copilot reads .github/copilot-instructions.md.',
-  },
-  'cline': {
-    label: 'Cline',
-    file: '.clinerules',
-    header: '# Cline rules — mirrors AGENTS.md\n',
-    detectionFiles: ['.clinerules'],
-    notes: 'Cline (VS Code extension) reads .clinerules.',
-  },
-  'roo': {
-    label: 'Roo Code',
-    file: '.roorules',
-    header: '# Roo Code rules — mirrors AGENTS.md\n',
-    detectionFiles: ['.roorules'],
-    notes: 'Roo Code reads .roorules.',
-  },
-  'kilo-code': {
-    label: 'Kilo Code',
-    file: '.kilocoderules',
-    header: '# Kilo Code rules — mirrors AGENTS.md\n',
-    detectionFiles: ['.kilocoderules'],
-    notes: 'Kilo Code reads .kilocoderules.',
-  },
-  'amazon-q': {
-    label: 'Amazon Q Developer',
-    file: '.amazonq/rules.md',
-    header: '# Amazon Q Developer rules — mirrors AGENTS.md\n',
-    detectionFiles: ['.amazonq/rules.md', '.amazonq/rules'],
-    notes: 'Amazon Q Developer reads .amazonq/rules.',
-  },
 
-  // ── Tools assumed to read AGENTS.md (format not yet confirmed) ───────────
-  'antigravity': {
-    label: 'Antigravity 2',
-    file: null,
-    header: null,
-    detectionFiles: ['.antigravity'],
-    notes: 'Antigravity 2 (IDE/CLI/SDK) — assumed to read AGENTS.md. Adjust if needed.',
-  },
-  'openclaw': {
-    label: 'OpenClaw',
-    file: null,
-    header: null,
-    detectionFiles: ['.openclaw'],
-    notes: 'OpenClaw — assumed to read AGENTS.md. Adjust if needed.',
-  },
-  'pi': {
-    label: 'Pi',
-    file: null,
-    header: null,
-    detectionFiles: ['.pi'],
-    notes: 'Pi — assumed to read AGENTS.md. Adjust if needed.',
-  },
-
-  // ── Special: full adapter directory ──────────────────────────────────────
+  // Special: full adapter directory
   'hermes': {
     label: 'Hermes',
     file: null,
