@@ -89,14 +89,14 @@ export const TOOL_REGISTRY = {
     notes: 'Cursor reads .cursorrules as system context.',
   },
 
-  // Special: full adapter directory (generic skill manifest)
+  // Special: skill manifest format (NOT a tool name — use claude-code, cursor, etc. for specific tools)
   'skill': {
-    label: 'Skill',
+    label: 'Skill Manifest',
     file: null,
     header: null,
     detectionFiles: ['adapters/skill/SKILL.md'],
     special: true,
-    notes: 'Generic skill manifest with wrapper scripts in adapters/skill/. Works with any coding agent that supports session-end-on-completion.',
+    notes: 'Generates SKILL.md manifest + wrapper scripts. For agents that use the skill format (not a tool name — use claude-code, cursor, codex, etc. for specific tools).',
   },
 };
 

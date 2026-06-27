@@ -35,6 +35,18 @@
     "agentTool": {
       "type": ["string", "null"],
       "enum": [null, "generic", "claude-code", "codex", "cursor", "windsurf", "gemini", "copilot", "cline", "roo", "kilo-code", "aider", "continue", "opencode", "amazon-q", "antigravity", "openclaw", "pi", "skill"],
+      "description": "Which coding agent tool. Tool names (claude-code, cursor, codex, etc.) generate tool-specific instruction files. 'skill' generates a SKILL.md manifest format. 'generic' = AGENTS.md only."
+    },
+    "currentFeature": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Currently active feature ID (tracked by state machine, set by ralph-inner when picking next feature)."
+    },
+    "currentTask": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Currently active task ID (tracked by state machine, set by ralph-inner when picking next task)."
+    },,
       "default": null,
       "description": "Which agentic coding tool the project uses (null = unspecified, tools auto-detect via AGENTS.md)"
     },

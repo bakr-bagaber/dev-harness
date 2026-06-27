@@ -81,6 +81,14 @@ export default async function roleCommand(args) {
     }
   }
 
+  // Inject persona tone from config (agents.tone.*) — enforced per role
+  const persona = config.agents?.tone?.[role] || null;
+  if (persona && roleSkill) {
+    roleSkill = `> **Persona:** ${persona}\n\n` + roleSkill;
+  } else if (persona) {
+    roleSkill = `> **Persona:** ${persona}\n`;
+  }
+
   if (json) {
     emitJson({
       command: 'role',
@@ -90,6 +98,7 @@ export default async function roleCommand(args) {
       previousRole,
       handoffWritten: true,
       roleSkillPath: roleSkill ? roleSkillPath : null,
+      persona,
       cleanState: cleanState.pass ? null : cleanState,
     });
     return;

@@ -18,7 +18,7 @@
  */
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
-import { runChecks, getPhase, areGatesEnabled, checkRoleForValidate, checkSelfEvaluationGuard, checkCleanState } from '../lib/gates.mjs';
+import { runChecks, getPhase, areGatesEnabled, checkRoleForValidate, checkSelfEvaluationGuard, checkCleanState, checkFeatureCriteria } from '../lib/gates.mjs';
 import { loadConfig, set as configSet, syncFeatureSummary, resetTaskRetry, resetFeatureRetry } from '../lib/state.mjs';
 import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { loadFeatureList, saveFeatureList, runPhase, getNextFeature, getNextTask } from '../lib/ralph-inner.mjs';
@@ -103,7 +103,7 @@ export default async function validateCommand(args) {
   }
 
   // G21: role-based gate enforcement — BUILD/VERIFY require currentRole=evaluator
-  const roleCheck = checkRoleForValidate(targetDir, phase);
+  const roleCheck = checkRoleForValidate(targetDir, phase, { feature, task });
   if (!roleCheck.allowed) {
     die(
       new CliError(roleCheck.reason, EXIT.VALIDATION_FAILURE),
@@ -185,12 +185,19 @@ export default async function validateCommand(args) {
         // G23: record which role produced this task's work (for self-eval guard)
         const { config: prodConfig } = loadConfig(targetDir);
         if (prodConfig.currentRole) { t.producedByRole = prodConfig.currentRole; }
-        // If all tasks in feature done, mark feature passing + reset feature retry
+        // If all tasks in feature done, check feature-level criteria (definitionOfDone)
+        // before marking feature as passing. G7: three-level criteria enforcement.
         if (feat.tasks.every(tk => tk.status === 'complete')) {
-          feat.passes = true;
-          if (feat.retryCount !== undefined) { feat.retryCount = 0; }
-          if (prodConfig.currentRole) { feat.producedByRole = prodConfig.currentRole; }
-          resetFeatureRetry(loadConfig(targetDir).config);
+          const featureCriteriaResult = checkFeatureCriteria(targetDir, feature);
+          if (!featureCriteriaResult.pass) {
+            // Feature criteria not met — don't mark as passing, surface the failure
+            out.featureCriteria = featureCriteriaResult;
+          } else {
+            feat.passes = true;
+            if (feat.retryCount !== undefined) { feat.retryCount = 0; }
+            if (prodConfig.currentRole) { feat.producedByRole = prodConfig.currentRole; }
+            resetFeatureRetry(loadConfig(targetDir).config);
+          }
         }
         saveFeatureList(targetDir, fl);
       }
@@ -306,11 +313,16 @@ export default async function validateCommand(args) {
       // G23: record which role produced this task's work (for self-eval guard)
       const { config: prodConfig } = loadConfig(targetDir);
       if (prodConfig.currentRole) { t.producedByRole = prodConfig.currentRole; }
-      // If all tasks in feature done, mark feature passing
+      // If all tasks in feature done, check feature-level criteria (definitionOfDone)
       if (feat.tasks.every(tk => tk.status === 'complete')) {
-        feat.passes = true;
-        if (prodConfig.currentRole) { feat.producedByRole = prodConfig.currentRole; }
-        emitHuman(`\n  ✓ Feature "${feat.name}" complete. All tasks done.\n`);
+        const featureCriteriaResult = checkFeatureCriteria(targetDir, feature);
+        if (!featureCriteriaResult.pass) {
+          emitHuman(`\n  ⚠ Feature criteria: ${featureCriteriaResult.detail}\n`);
+        } else {
+          feat.passes = true;
+          if (prodConfig.currentRole) { feat.producedByRole = prodConfig.currentRole; }
+          emitHuman(`\n  ✓ Feature "${feat.name}" complete. All tasks done.\n`);
+        }
       } else {
         emitHuman(`\n  ✓ Task "${task}" complete.\n`);
       }

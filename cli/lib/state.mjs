@@ -36,6 +36,8 @@ export function getDefaultConfig() {
     mode: 'copilot',
     currentPhase: null,
     currentRole: null,
+    currentFeature: null,
+    currentTask: null,
     paused: false,
     features: {
       remaining: 0,

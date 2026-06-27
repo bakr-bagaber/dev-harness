@@ -14,7 +14,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { loadConfig, getRetryConfig } from './state.mjs';
+import { loadConfig, getRetryConfig, set as stateSet } from './state.mjs';
 import { validateAgainstSchema } from './validate-schema.mjs';
 import { gitHardResetClean } from './git.mjs';
 import { phaseLabel } from './command-helpers.mjs';
@@ -300,6 +300,8 @@ export async function runPhase(targetDir, phase, options = {}) {
 
     if (!feature) {
       // All features pass — phase gate passes
+      stateSet(targetDir, 'currentFeature', null);
+      stateSet(targetDir, 'currentTask', null);
       return {
         ok: true,
         status: 'complete',
@@ -318,6 +320,10 @@ export async function runPhase(targetDir, phase, options = {}) {
       saveFeatureList(targetDir, fl);
       return await runPhase(targetDir, phase, options); // Recurse to get next feature
     }
+
+    // Track current feature/task in state machine (G14: handoff shows active work)
+    stateSet(targetDir, 'currentFeature', feature.id);
+    stateSet(targetDir, 'currentTask', task.id);
 
     const output = buildFeatureIterateOutput(phase, feature, task, mode, maxRetries, resetOnRetry, autoCommit);
 

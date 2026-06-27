@@ -559,6 +559,44 @@ function checkTaskCriteria(targetDir, featureId, taskId) {
 }
 
 /**
+ * Check that a feature's definitionOfDone list is non-empty and non-placeholder.
+ * FEATURE-LEVEL criteria gate — mirrors checkTaskCriteria (task-level) and
+ * checkContractCriteria (phase-level). Three levels of criteria enforcement:
+ *   - Task level:    acceptanceCriteria (checkTaskCriteria)
+ *   - Feature level: definitionOfDone (checkFeatureCriteria)
+ *   - Phase level:   contract ## Verification Criteria (checkContractCriteria)
+ * @param {string} targetDir
+ * @param {string} featureId
+ * @returns {{ name: string, pass: boolean, detail: string }}
+ */
+export function checkFeatureCriteria(targetDir, featureId) {
+  const flPath = FEATURE_LIST_PATH(targetDir);
+  if (!existsSync(flPath)) {
+    return { name: 'feature-criteria', pass: false, detail: 'No feature-list.json found' };
+  }
+
+  let fl;
+  try {
+    fl = JSON.parse(readFileSync(flPath, 'utf-8'));
+  } catch {
+    return { name: 'feature-criteria', pass: false, detail: 'Cannot parse feature-list.json' };
+  }
+
+  const feature = fl.features?.find(f => f.id === featureId);
+  if (!feature) {
+    return { name: 'feature-criteria', pass: false, detail: `Feature ${featureId} not found` };
+  }
+
+  const criteria = feature.definitionOfDone || [];
+  const real = criteria.filter(c => c && c.trim() && !/^\.{3}$/.test(c.trim()) && !/^\d+\.\s*\.{3}$/.test(c.trim()));
+
+  if (real.length === 0) {
+    return { name: 'feature-criteria', pass: false, detail: `Feature ${featureId} has no definitionOfDone — fill the list before marking feature complete` };
+  }
+  return { name: 'feature-criteria', pass: true, detail: `Feature ${featureId} has ${real.length} definition-of-done criteria` };
+}
+
+/**
  * Check that the evaluator-rubric.md has meaningful content (not just a stub) (G9).
  * Replaces checkRubricExists — now checks content depth, not just file existence.
  * @param {string} targetDir
@@ -851,7 +889,7 @@ export function areGatesEnabled(targetDir) {
  * @param {string} phase
  * @returns {{ allowed: boolean, reason: string|null, requiredRole: string|null }}
  */
-export function checkRoleForValidate(targetDir, phase) {
+export function checkRoleForValidate(targetDir, phase, options = {}) {
   const { config, ok } = loadConfig(targetDir);
   if (!ok) {
     return { allowed: true, reason: null, requiredRole: null }; // can't check — allow
@@ -868,6 +906,20 @@ export function checkRoleForValidate(targetDir, phase) {
         allowed: false,
         reason: `validate in ${phase.toUpperCase()} requires currentRole=evaluator (got: ${currentRole}). Run: dev-harness role evaluator`,
         requiredRole: 'evaluator',
+      };
+    }
+  }
+
+  // G21 extension: per-task role enforcement. When validating a single task
+  // (--feature --task), enforce the role rotation:
+  //   DEFINE tasks require planner (scoping)
+  //   BUILD/VERIFY tasks require evaluator (already enforced above)
+  if (options.feature && options.task) {
+    if (phase === 'define' && currentRole !== null && currentRole !== 'planner') {
+      return {
+        allowed: false,
+        reason: `Task-level validation in DEFINE requires currentRole=planner (got: ${currentRole}). Run: dev-harness role planner`,
+        requiredRole: 'planner',
       };
     }
   }
@@ -890,8 +942,8 @@ export function checkSelfEvaluationGuard(targetDir, featureId, taskId) {
   }
 
   const currentRole = config.currentRole || null;
-  if (!currentRole || currentRole !== 'evaluator') {
-    return { allowed: true, reason: null }; // only applies to evaluator
+  if (!currentRole) {
+    return { allowed: true, reason: null }; // no role set — allow
   }
 
   // Load feature-list.json to find producedByRole
@@ -915,11 +967,13 @@ export function checkSelfEvaluationGuard(targetDir, featureId, taskId) {
 
   const producedByRole = task.producedByRole || feature.producedByRole || null;
 
-  // G23: if the evaluator is the same role that produced the work → self-evaluation
+  // G23: The generator cannot evaluate its own work. If the same role both
+  // produced the work AND is now trying to validate it, block — a different
+  // session (different role) must evaluate.
   if (producedByRole && producedByRole === currentRole) {
     return {
       allowed: false,
-      reason: `Self-evaluation guard: task ${taskId} was produced by role=${producedByRole}, but currentRole=${currentRole}. A different session must evaluate.`,
+      reason: `Self-evaluation guard: task ${taskId} was produced by role=${producedByRole}, and currentRole=${currentRole}. The generator cannot evaluate its own work — a different session must evaluate.`,
     };
   }
 

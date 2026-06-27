@@ -74,21 +74,21 @@ flowchart LR
     style SHIP fill:#2ECC71,color:#fff,stroke:none
 ```
 
-Each phase has **deterministic gates** — automated checks that must pass before the pipeline can advance. The agent does the work; the harness validates the result. No more wondering if the agent actually finished what it said it did.
+Each phase ##the gates are not only phases, but also at tasks and features, update that## has **deterministic gates** — automated checks that must pass before the pipeline can advance. The agent does the work; the harness validates the result. No more wondering if the agent actually finished what it said it did.
 
 ### ✨ Key Features
 
 | | Feature | Description |
 |---|---------|-------------|
-| 🧩 | **Agent-Agnostic** | Works with any coding agent that reads instruction files (`AGENTS.md`) |
-| 🚦 | **Phase Pipeline** | 7-phase workflow: Define → Plan → Build → Verify → Simplify → Review → Ship |
-| 🚧 | **Gate Validation** | Every phase has deterministic pass/fail checks — no skipping steps |
+| 🧩 | **Agent-Agnostic** | Works with any coding agent that reads instruction files (`AGENTS.md`) ##it also supports claude and cursor which have dont read agents.md, update that## |
+| 🚦 | **Phase Pipeline** | 7-phase workflow: Define → Plan → Build → Verify → Simplify → Review → Ship | ##mention that this part was insipred by whome##
+| 🚧 | **Gate Validation** | Every phase has deterministic pass/fail checks — no skipping steps | ##mention that this part was insipred by whome##
 | 🔄 | **Ralph Loops** | Inner/outer iterative loops with fresh-context retry (inspired by [ghuntley.com/ralph](https://ghuntley.com/ralph)) |
 | 🔁 | **3-Level Retry** | Configurable retry at task, feature, and phase levels |
-| 🧑‍⚖️ | **Multi-Agent Roles** | Planner/Generator/Evaluator/Simplifier committee with self-evaluation guard |
-| 📝 | **Sprint Contracts** | Pre-build negotiation between agent roles for spec/code agreement |
+| 🧑‍⚖️ | **Multi-Agent Roles** | Planner/Generator/Evaluator/Simplifier committee with self-evaluation guard | ##mention that this part was insipred by whome##
+| 📝 | **Sprint Contracts** | Pre-build negotiation between agent roles for spec/code agreement | ##mention that this part was insipred by whome##
 | 📋 | **Criteria Enforcement** | Task, feature, and phase-level pass criteria — no placeholder shipping |
-| 🤝 | **Session Handoff** | 3-file split: handoff snapshot, append-only history, lessons+decisions |
+| 🤝 | **Session Handoff** | 3-file split: handoff snapshot, append-only history, lessons+decisions | ##mention that this part was insipred by whome##
 | 🏗️ | **31+ Stack Templates** | Python, Node.js, Go, Rust, C, C++, Java, Kotlin, .NET, Ruby, PHP, Swift, Elixir, and many more |
 | 🏭 | **Custom Stacks** | Unlimited custom language/platform support via `config.stackMeta` |
 | 🧹 | **Cleanup & Audit** | Stale artifact scanning, empty dir detection, active-gate auditing |
@@ -102,6 +102,7 @@ Each phase has **deterministic gates** — automated checks that must pass befor
 
 Dev Harness is a **backend CLI**. Your coding agent is the **frontend** — it reads instruction files and calls CLI commands to follow the workflow.
 
+##This blick diagram does not show sequency, it shows everything in parallel, before you draw something, think twice and make sure it actually explains the workfloe, fix it##
 ```mermaid
 flowchart TD
     User([User]) -->|starts| Agent[Your Coding Agent]
@@ -115,7 +116,7 @@ flowchart TD
 ```
 
 ### How the agent follows the workflow
-
+##this is very high level, you should elaborate more, where is the handoffs, criteria checks, tasks, features, and phases, retry loops on all levels, 3 levels, where is the coontract, each phase of the seven phases is not elaborated, .... and and and##
 1. Agent reads `AGENTS.md` — workflow driver with phase mapping + rules
 2. Agent calls `dev-harness status` — learns current phase (clock-in)
 3. Agent reads `harness/docs/phases/<phase>.md` — phase skill with Process/Verification/Red Flags
@@ -130,13 +131,14 @@ flowchart TD
 |-------|-----------|------|
 | **Gates** | `validate` checks quality before advancing | Hard |
 | **Phase order** | `phase next` enforces define→plan→build→verify→review→ship | Hard |
-| **State machine** | `config.json` tracks current phase — can't fake advancement | Hard |
-| **Role gates** | `validate` in BUILD/VERIFY requires `currentRole=evaluator` | Hard |
-| **Self-eval guard** | Evaluator can't validate work they produced | Hard |
-| **AGENTS.md** | Agent tools natively read instruction files | Soft |
+| **State machine** | `config.json` tracks current phase — can't fake advancement | Hard | ##does it only tracks phases or also features and tasks, you better andwear this!!!!##
+| **Role gates** | `validate` in BUILD/VERIFY requires `currentRole=evaluator` | Hard | ##I though the roles are rotating also inside the task level, you seem either stuck at the specs of an earlier implementation of the repo, or you have done somehting wrong!!!!##
+| **Self-eval guard** | Evaluator can't validate work they produced | Hard | ##you mean generator cannot evalutae its own work##
+| **AGENTS.md** | Agent tools natively read instruction files | Soft | ##how about claude and cursur files, they should be replicas of agents.md##
 
 ### 7-Phase Pipeline
 
+##This figure is redundant, you ahve already shown the same info in the first figure##
 ```mermaid
 flowchart LR
     INIT[INIT<br/>Scaffold] --> DEFINE[DEFINE<br/>Specs + contract]
@@ -163,10 +165,10 @@ stateDiagram-v2
         [*] --> LoadConfig
         LoadConfig --> CheckRetries
         CheckRetries --> Escalated: retries >= max
-        CheckRetries --> GitReset: retry & --git-ops
+        CheckRetries --> GitReset: retry & --git-ops##it should be git project name, ops is my own folder, this is a generic public repo, make sure nowhere inside this dev-harness folder ops is mentioned##
         GitReset --> PickTask
         CheckRetries --> PickTask: fresh run
-        PickTask --> FeatureIterate: build/verify/simplify
+        PickTask --> FeatureIterate: build/verify/simplify ##so we puícked a task then we iterate over features! how about we iterate over tasks first, then over features, we have three loops pro, tasks loop, features loop, and phases loop, or at least this is what we are supposed to have, I dont know what have you done!!!##
         PickTask --> DeliverableRetry: init/define/plan/review/ship
         FeatureIterate --> Instruction: next task
         DeliverableRetry --> Instruction: produce deliverable
@@ -174,7 +176,7 @@ stateDiagram-v2
     }
     Running --> Complete: all features pass
     Running --> Escalated: retries exhausted
-    Complete --> [*]
+    Complete --> [*] ##seems like a dead end to me, no clear loops and ifs and start and finish, this block diagram needs redoing properly##
     Escalated --> [*]
 ```
 
@@ -184,7 +186,7 @@ Retry is configurable at three independent levels with the escalation chain **ta
 
 | Level | Config | Trigger | Action |
 |-------|--------|---------|--------|
-| **Task** | `retry.tasks.enabled` | Per-task gate failure | Retry same task up to `maxRetries` |
+| **Task** | `retry.tasks.enabled` | Per-task gate failure ##also a failed criteria meet##| Retry same task up to `maxRetries` |
 | **Feature** | `retry.features.enabled` | Task exhaustion | Reset feature's tasks, re-sweep |
 | **Phase** | `retry.phases.enabled` | Feature exhaustion | Reset all features, re-run phase |
 
@@ -194,20 +196,21 @@ dev-harness config set retry.features.enabled true
 dev-harness config set retry.phases.enabled true
 ```
 
-> **Autopilot mode** (`init --mode autopilot`) enables the full cascade by default: task 3× → feature 2× → phase 2× = 12 attempts before human.
+> **Autopilot mode** (`init --mode autopilot`) enables the full cascade by default: task 3× → feature 2× → phase 2× = 12 attempts before human. ##how bout you explain copilot here too##
 
 ### Multi-Agent Role Framework
 
-The harness implements a planner/generator/evaluator/simplifier committee via **separate agent sessions per role**. Each role is a different agent session — the harness enforces role separation, clean handoffs, and prevents self-evaluation.
+The harness implements a planner/generator/evaluator/simplifier committee via **separate agent sessions per role**. Each role is a different agent session ##and different persona, I hope you have implemented that!!!## — the harness enforces role separation, clean handoffs, and prevents self-evaluation.
 
 | Role | Responsibility | Gate Enforcement |
 |------|---------------|------------------|
+##this is lacking alot, and inconsistent with what we agreed on##
 | **Planner** | Define scope, write specs, propose contracts | `contract propose` requires planner |
 | **Generator** | Implement features, write code | — |
 | **Evaluator** | Review, validate, sign off | `validate` in BUILD/VERIFY requires evaluator; `contract review` requires evaluator |
 | **Simplifier** | Refactor, reduce complexity | — |
 
-**Self-evaluation guard:** The evaluator cannot validate work they produced. When a task is marked complete, the harness records `producedByRole`. If `currentRole === producedByRole`, validation is blocked — a different session must evaluate.
+**Self-evaluation guard:** The evaluator ##you must have meant the generator!!!## cannot validate work they produced. When a task is marked complete, the harness records `producedByRole`. If `currentRole === producedByRole`, validation is blocked — a different session must evaluate.
 
 ```bash
 # Switch roles (fires session boundary — writes handoff + clean-state check)
@@ -221,7 +224,7 @@ dev-harness role simplifier
 
 At every session boundary (role handoff, phase transition, task/feature complete, pause), the harness:
 
-1. **Writes `session-handoff.md`** (overwrite) — clock-out snapshot with current phase, role, gate status, next action, retry counters
+1. **Writes `session-handoff.md`** (overwrite) — clock-out snapshot with current phase ##task, feature, ...##, role, gate status, next action, retry counters
 2. **Runs the clean-state gate** (advisory) — 5 conditions: lint, tests, handoff exists, no stale artifacts, startup path works
 3. **Appends to `progress.md`** (append-only) — history log
 
@@ -259,7 +262,7 @@ cd my-project
 dev-harness init --stack node
 
 # 2️⃣ Start your coding agent (it reads AGENTS.md automatically)
-
+##you never mention that claude and cursor files are also supported, or are they not!?##
 # 3️⃣ Inside the agent, follow the workflow:
 #    - Agent reads AGENTS.md → sees workflow + phase mapping
 #    - Agent calls: dev-harness status → learns current phase (clock-in)
@@ -268,7 +271,7 @@ dev-harness init --stack node
 #    - Agent calls: dev-harness validate → gates check
 #    - Agent calls: dev-harness phase next → advance to next phase
 #    - Repeat through: DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP
-```
+```##repetitive and lacking, see my earlier comment at the similar workflow description at the begining of this file##
 
 ### Agent Tool Integration
 
@@ -286,7 +289,7 @@ dev-harness init --stack node --agent-tool skill,skill2
 
 # All supported tools
 dev-harness init --stack node --agent-tool all
-```
+```##this is not clear, what is this skill!!! have you ment agentic tool names such as claude or hermes or ....##
 
 > **All instruction files are generated from `AGENTS.md` content** — single source of truth.
 
@@ -295,12 +298,12 @@ dev-harness init --stack node --agent-tool all
 ## 🧠 How It Works
 
 ### Pipeline Phases
-
+##this table should have been put at the begining, now at the end of the file##
 | Phase | 🎯 Goal | 📦 Key Artifact | 🚧 Gate(s) |
 |-------|---------|-----------------|------------|
 | 🔵 **DEFINE** | Write specs before any code | `specs/prd.md` | `feature-branch`, `contract-agreed`, `contract-criteria` |
-| 🟢 **PLAN** | Break specs into actionable tasks | `feature-list.json` | `git-clean` |
-| 🟠 **BUILD** | Implement features one at a time | Working code | `git-clean`, `lint`, `tests`, `contract-agreed`, `contract-criteria`, `coverage`, `anti-placeholder` |
+| 🟢 **PLAN** | Break specs into actionable tasks ##into features, each consisting of actionable tasks## | `feature-list.json` | `git-clean` |
+| 🟠 **BUILD** | Implement features ##features and tasks## one at a time | Working code | `git-clean`, `lint`, `tests`, `contract-agreed`, `contract-criteria`, `coverage`, `anti-placeholder` |
 | 🟣 **VERIFY** | Validate and test everything | Passing test suite | `git-clean`, `tests`, `coverage` |
 | 🟡 **SIMPLIFY** | Refactor, reduce complexity | Cleaner codebase | `git-clean`, `no-empty-dirs` |
 | 🔴 **REVIEW** | Multi-agent committee review | Review report | `branch-up-to-date`, `rubric-content`, `readme`, `architecture`, `decisions` |
@@ -321,7 +324,7 @@ Each phase has a skill file (`harness/docs/phases/<phase>.md`) following the [ad
 - **Handoff** — `dev-harness phase next` + role transition
 
 ### Gate Validation
-
+##i dont see you mentioning feature gates, tasks gates? and teh all new important pass criteria that we agreed on!?##
 Every phase has **deterministic gates** — automated checks that return a clear **pass/fail**. Gates prevent the most common failure modes in AI-assisted development:
 
 - 🚫 **No skipping** — can't ship without reviewing
@@ -340,7 +343,7 @@ dev-harness init --stack node --no-gates
 ### Ralph Inner / Outer Loops
 
 The architecture is built on the **Ralph pattern** — an iterative loop architecture that gives the agent fresh context on each retry.
-
+##are tehy 2 or three loops!? review my earlier comment regarding this##
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    🌐 OUTER LOOP                         │
