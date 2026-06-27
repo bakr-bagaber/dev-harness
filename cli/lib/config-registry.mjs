@@ -72,7 +72,7 @@ export const CONFIG_PARAMS = [
     type: 'enum',
     description: 'Which agentic coding tool the project uses. Determines tool-specific file generated (CLAUDE.md, .cursorrules, etc.). null = unspecified.',
     default: null,
-    options: [null, 'generic', 'claude-code', 'codex', 'cursor', 'opencode', 'antigravity', 'openclaw', 'hermes'],
+    options: [null, 'generic', 'claude-code', 'codex', 'cursor', 'opencode', 'antigravity', 'openclaw', 'skill'],
     editable: true,
   },
 

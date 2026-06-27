@@ -39,6 +39,18 @@
             "default": 0,
             "description": "Per-feature retry counter (v3.1.0+). Reset to 0 when the feature passes, incremented when a task exhausts task-retries. Mirrors config.featureRetryCount for the currently-active feature."
           },
+          "definitionOfDone": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "description": "Feature-level pass criteria (list). Gate checks all items present + non-placeholder before allowing passes:true. Mirrors acceptanceCriteria at task level and contract ## Verification Criteria at phase level."
+          },
+          "producedByRole": {
+            "type": ["string", "null"],
+            "enum": [null, "planner", "generator", "evaluator", "simplifier"],
+            "default": null,
+            "description": "Role that produced this feature's work. Used by the self-evaluation guard (validate refuses if currentRole === producedByRole)."
+          },
           "tasks": {
             "type": "array",
             "items": {
@@ -64,6 +76,18 @@
                   "minimum": 0,
                   "default": 0,
                   "description": "Per-task retry counter (tracked in config.taskRetryCount, mirrored here for history)"
+                },
+                "acceptanceCriteria": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "default": [],
+                  "description": "Task-level pass criteria (list). Gate checks all items present + non-placeholder before allowing status:complete. Mirrors definitionOfDone at feature level and contract ## Verification Criteria at phase level."
+                },
+                "producedByRole": {
+                  "type": ["string", "null"],
+                  "enum": [null, "planner", "generator", "evaluator", "simplifier"],
+                  "default": null,
+                  "description": "Role that produced this task's work. Used by the self-evaluation guard (validate refuses if currentRole === producedByRole)."
                 }
               }
             }

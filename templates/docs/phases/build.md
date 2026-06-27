@@ -1,41 +1,41 @@
 # BUILD Phase
 
-**Loop mode:** Feature-iterate
-**Unit of work:** One incomplete feature from `feature_list.json`
-**Primary agent:** Generator
+## Overview
+Implement each feature task-by-task. The inner loop iterates features and tasks,
+producing instructions for each. Validate after each task before advancing.
 
-## Purpose
+## When to Use
+- PLAN phase complete (feature list + sprint contract exist)
+- Ready to write code
 
-Implement features one at a time. Each iteration: pick the next incomplete
-feature → work → validate that task → pass = next feature / fail = retry with
-fresh context. Only when all features pass does the phase gate run.
+## Process
+1. Read `harness/progress.md`, `AGENTS.md`, and `harness/features/feature-list.json`
+2. Run `dev-harness status` to see current feature/task
+3. For each incomplete feature → for each pending task:
+   a. Implement the task (write code, tests, docs)
+   b. Run `dev-harness validate --feature <id> --task <id>` to validate
+   c. If PASS → task marked complete, advance to next task
+   d. If FAIL → fix issues, re-validate (retry up to `retry.tasks.maxRetries`)
+4. When all tasks in a feature pass → feature marked complete
+5. When all features pass → phase gate passes
+6. Run `dev-harness phase next` to advance to VERIFY
 
-## Entry
+## Rationalizations to Avoid
+| Excuse | Rebuttal |
+|--------|----------|
+| "I'll validate at the end" | Late validation catches problems when they're expensive to fix |
+| "This task is trivial, skip validation" | Trivial tasks still have edge cases |
+| "The tests pass, so it works" | Tests must cover acceptance criteria, not just happy path |
 
-- PLAN gate passed
-- `sprint-contract.md` status is `Agreed`
-- `feature_list.json` non-empty
+## Red Flags
+- Tasks marked complete without validation
+- Features with all tasks complete but `passes: false` — run validate
+- Tests that only test the implementation, not the behavior
 
-## Work
-
-1. Read `progress.md`, `AGENTS.md`, `sprint-contract.md`.
-2. Pick next feature where `passes === false`.
-3. Implement the feature's tasks.
-4. Run `dev-harness validate --feature <name> --task <id>` per task.
-5. On pass: mark feature `passes: true`, commit, append lesson to `progress.md`.
-6. On fail (≤ `maxRetries`): retry with fresh context (git reset if `--git-ops`).
-7. On fail (> `maxRetries`): escalate to human.
-
-## Exit Gate
-
-Run `dev-harness validate` — checks:
-
-- `config-exists`
-- `git-repo`
-- `feature-branch` (not on main/master)
-- `git-clean`
-- All features in `feature_list.json` have `passes: true`
+## Verification
+- [ ] Each task validated with `dev-harness validate --feature X --task Y`
+- [ ] All features marked `passes: true` in feature-list.json
+- [ ] `dev-harness validate` passes (full phase gates)
 
 ## Handoff
-
-On gate pass: `dev-harness phase verify` (Generator → Evaluator).
+On gate pass: `dev-harness phase next` (Generator → Evaluator for VERIFY)

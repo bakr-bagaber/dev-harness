@@ -163,7 +163,7 @@ export function generateTemplates(opts) {
   // Load stack variables
   const stackVars = getStackVars(stack, {
     harnessVersion: loadPackageVersion(),
-    maxRetries: '3',
+    maxRetries: '10', // G3: was '3' (stale); actual DEFAULT_MAX_RETRIES=10
     ...overrides,
   });
 

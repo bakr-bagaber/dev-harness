@@ -5,7 +5,7 @@ Antigravity 2 (IDE/CLI/SDK) — assumed to read AGENTS.md.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool antigravity --target my-project
+dev-harness init --stack node --agent-tool antigravity --target my-project
 cd my-project
 ```
 

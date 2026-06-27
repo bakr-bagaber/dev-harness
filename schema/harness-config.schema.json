@@ -34,7 +34,7 @@
     },
     "agentTool": {
       "type": ["string", "null"],
-      "enum": [null, "generic", "claude-code", "codex", "cursor", "windsurf", "gemini", "copilot", "cline", "roo", "kilo-code", "aider", "continue", "opencode", "amazon-q", "antigravity", "openclaw", "pi", "hermes"],
+      "enum": [null, "generic", "claude-code", "codex", "cursor", "windsurf", "gemini", "copilot", "cline", "roo", "kilo-code", "aider", "continue", "opencode", "amazon-q", "antigravity", "openclaw", "pi", "skill"],
       "default": null,
       "description": "Which agentic coding tool the project uses (null = unspecified, tools auto-detect via AGENTS.md)"
     },
@@ -49,6 +49,12 @@
       "enum": [null, "init", "define", "plan", "build", "verify", "simplify", "review", "ship"],
       "default": null,
       "description": "Current pipeline phase"
+    },
+    "currentRole": {
+      "type": ["string", "null"],
+      "enum": [null, "planner", "generator", "evaluator", "simplifier"],
+      "default": null,
+      "description": "Current agent role (multi-agent committee). Set via `dev-harness role <name>`. Used by role-based gates (validate requires evaluator in BUILD/VERIFY; contract propose requires planner) and the self-evaluation guard (validate refuses if currentRole === producedByRole)."
     },
     "paused": {
       "type": "boolean",
@@ -67,7 +73,61 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean", "default": false },
-        "checks": { "type": "array", "items": { "type": "string" }, "default": ["all"] }
+        "checks": { "type": "array", "items": { "type": "string" }, "default": ["all"] },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "threshold": { "type": "integer", "minimum": 0, "maximum": 100, "default": 80 }
+          }
+        },
+        "cleanState": {
+          "type": "object",
+          "description": "Clean-state gate config (walkinglabs L12). 5 conditions: build passes, tests pass, progress recorded, no stale artifacts, startup path works. Fires at all 7 session-boundary triggers.",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false, "description": "Enable clean-state gate at session boundaries." },
+            "stalePatterns": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": [],
+              "description": "Regex patterns for stale artifacts (debug statements, TODOs, temp files). Stack-specific defaults set during init (node: console.log, debugger, TODO, FIXME; python: print(, TODO, pass$)."
+            },
+            "startupCmd": {
+              "type": ["string", "null"],
+              "default": null,
+              "description": "Command to verify startup path works (e.g. 'node -e \"require(\\\"./src/index.js\\\")\"'). Null = skip startup check."
+            }
+          }
+        },
+        "antiPlaceholder": {
+          "type": "object",
+          "description": "Anti-placeholder gate config (Ralph pattern). Greps for TODO/FIXME/NotImplemented/stub markers. Wired into build + ship gates.",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true, "description": "Enable anti-placeholder gate (on by default when gates enabled)." },
+            "patterns": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": [],
+              "description": "Regex patterns for placeholder code. Stack-specific defaults set during init (node: console.log, debugger, TODO, FIXME, throw new Error('not implemented'); python: TODO, pass$, NotImplementedError)."
+            }
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "description": "Periodic cleanup config (walkinglabs L12 cleanup loop). Reduces entropy: stale artifacts, empty dirs, quality-doc freshness, drift.",
+      "properties": {
+        "schedule": {
+          "type": "string",
+          "default": "0 2 * * 0",
+          "description": "Cron expression for cleanup schedule (default: weekly Sunday 2am). Agent/human installs via OS cron/Task Scheduler."
+        },
+        "autoFix": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-fix issues found during cleanup (false = report only). Override with --auto-fix flag."
+        }
       }
     },
     "git": {

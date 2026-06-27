@@ -5,7 +5,7 @@ Roo Code reads .roorules.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool roo --target my-project
+dev-harness init --stack node --agent-tool roo --target my-project
 cd my-project
 ```
 

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * dev-harness — Agent-agnostic development harness CLI + TUI.
+ * dev-harness — Agent-agnostic development harness CLI (backend).
  *
- * Entry point. Two modes:
- *   - No subcommand + TTY → launches interactive TUI (full human interface)
- *   - Subcommand given → CLI mode (for AI agents, scripting, --json)
+ * Entry point. CLI mode only — AI agent tools (Claude Code, Codex, Cursor,
+ * OpenCode, Antigravity) are the frontend. They read AGENTS.md + phase skill
+ * files and call CLI commands to follow the workflow.
  *
- * Parses args, routes to command handler or TUI app,
- * formats output (human or JSON), handles errors.
+ * Parses args, routes to command handler, formats output (human or JSON).
  */
 
 import { parseArgs } from './lib/args.mjs';
@@ -16,23 +15,24 @@ import { helpText, versionText, commandHelpText } from './lib/help.mjs';
 
 /** Map of command names to their implementation modules. */
 const COMMANDS = {
-  init:      () => import('./commands/init.mjs'),
-  status:    () => import('./commands/status.mjs'),
-  phase:     () => import('./commands/phase.mjs'),
-  validate:  () => import('./commands/validate.mjs'),
-  run:       () => import('./commands/run.mjs'),
-  'select-tool': () => import('./commands/select-tool.mjs'),
+  init:       () => import('./commands/init.mjs'),
+  status:     () => import('./commands/status.mjs'),
+  phase:      () => import('./commands/phase.mjs'),
+  validate:   () => import('./commands/validate.mjs'),
   'set-mode': () => import('./commands/set-mode.mjs'),
-  config:    () => import('./commands/config.mjs'),
-  pause:     () => import('./commands/pause.mjs'),
-  resume:    () => import('./commands/resume.mjs'),
-  learn:     () => import('./commands/learn.mjs'),
-  contract:  () => import('./commands/contract.mjs'),
-  worktree:  () => import('./commands/worktree.mjs'),
-  rollback:  () => import('./commands/rollback.mjs'),
+  config:     () => import('./commands/config.mjs'),
+  pause:      () => import('./commands/pause.mjs'),
+  resume:     () => import('./commands/resume.mjs'),
+  learn:      () => import('./commands/learn.mjs'),
+  decision:   () => import('./commands/decision.mjs'),
+  role:       () => import('./commands/role.mjs'),
+  contract:   () => import('./commands/contract.mjs'),
+  worktree:   () => import('./commands/worktree.mjs'),
+  rollback:   () => import('./commands/rollback.mjs'),
   checkpoint: () => import('./commands/checkpoint.mjs'),
-  'detect-tool': () => import('./commands/detect-tool.mjs'),
-  help:      null, // handled inline — prints help text, registers as valid command
+  cleanup:    () => import('./commands/cleanup.mjs'),
+  audit:      () => import('./commands/audit.mjs'),
+  help:       null, // handled inline
 };
 
 async function main() {
@@ -58,14 +58,8 @@ async function main() {
     return;
   }
 
-  // No command → launch TUI (if TTY) or show help (if not TTY)
+  // No command → show help (agent-backend mode, no TUI)
   if (!args.command) {
-    if (process.stdout.isTTY && !json) {
-      // Launch interactive TUI
-      const { launchTui } = await import('./tui/app.mjs');
-      await launchTui(process.cwd());
-      return;
-    }
     process.stdout.write(helpText(json) + '\n');
     return;
   }

@@ -91,7 +91,7 @@ dev-harness config set retry.phases.enabled true
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `agentTool` | enum | `null` | Which coding agent tool: `claude-code`, `cursor`, `windsurf`, `gemini`, `copilot`, `cline`, `roo`, `kilo-code`, `codex`, `aider`, `continue`, `opencode`, `amazon-q`, `hermes`, `generic`, or `null` (auto-detect) |
+| `agentTool` | enum | `null` | Which coding agent tool: `claude-code`, `cursor`, `windsurf`, `gemini`, `copilot`, `cline`, `roo`, `kilo-code`, `codex`, `aider`, `continue`, `opencode`, `amazon-q`, `skill`, `generic`, or `null` (auto-detect) |
 
 **Example:**
 ```bash
@@ -102,16 +102,36 @@ dev-harness config set agentTool claude-code
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `gates.enabled` | boolean | `false` | Master switch for phase gate validation |
+| `gates.enabled` | boolean | `true` | Master switch for phase gate validation (ON by default since v3.2.0; use `init --no-gates` to disable) |
 | `gates.checks` | array | `["all"]` | Which checks to run (`["all"]` or specific names) |
 | `gates.coverage.enabled` | boolean | `false` | Enable coverage threshold check |
 | `gates.coverage.threshold` | integer | `80` | Minimum coverage percentage (0-100) |
+| `gates.cleanState.enabled` | boolean | `false` | Enable clean-state gate at session boundaries (G17). 5 conditions: lint, tests, handoff, no-stale, startup |
+| `gates.cleanState.stalePatterns` | array | `[]` | Regex patterns for stale artifacts (e.g., `["console.log","TODO"]`) |
+| `gates.cleanState.startupCmd` | string\|null | `null` | Command to verify startup path works (e.g., `"node -e 1"`) |
+| `gates.antiPlaceholder.enabled` | boolean | `true` | Enable anti-placeholder gate (G24b). Scans for TODO/FIXME/console.log/debugger etc. |
+| `gates.antiPlaceholder.patterns` | array | `[]` | Custom placeholder patterns (stack defaults used when empty) |
 
 **Examples:**
 ```bash
 dev-harness config set gates.enabled true
 dev-harness config set gates.coverage.enabled true
 dev-harness config set gates.coverage.threshold 90
+dev-harness config set gates.cleanState.enabled true
+dev-harness config set gates.cleanState.stalePatterns --json-value '["console.log","TODO"]'
+dev-harness config set gates.cleanState.startupCmd "node -e 1"
+```
+
+### Cleanup
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `cleanup.schedule` | string | `"0 2 * * 0"` | Cron expression for cleanup schedule (default: weekly Sunday 2am) |
+| `cleanup.autoFix` | boolean | `false` | Auto-fix issues found during cleanup (removes empty dirs) |
+
+**Example:**
+```bash
+dev-harness config set cleanup.autoFix true
 ```
 
 ### Git
@@ -160,6 +180,7 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 | Key | Type | Description |
 |-----|------|-------------|
 | `currentPhase` | string | Current pipeline phase |
+| `currentRole` | string\|null | Current agent role (planner/generator/evaluator/simplifier/null). Set via `dev-harness role` (G19) |
 | `retryCount` | integer | (Legacy) phase-level retry count — superseded by `phaseRetryCount` for the new 3-level model; kept for backward compat / deliverable-retry phases. |
 | `taskRetryCount` | integer | Per-task retry count (reset on task success) |
 | `featureRetryCount` | integer | Per-feature retry count (reset when feature passes) — v3.1.0+ |
@@ -173,25 +194,6 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 | `git.clean` | boolean | Working tree clean (auto-detected) |
 | `git.hasUpstream` | boolean | Upstream tracking (auto-detected) |
 | `git.lastCommitMessage` | string | Last commit message (auto-detected) |
-
-### Supervisor (Orchestrator)
-
-Controls the `dev-harness run` orchestrator behavior — spawning agents per task,
-API downtime resilience, and heartbeat monitoring.
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `supervisor.enabled` | boolean | `false` | Whether orchestrator mode is active |
-| `supervisor.apiRetries` | integer | `5` | Max API retry attempts before pausing pipeline |
-| `supervisor.backoffMs` | integer | `60000` | Base backoff delay in ms (exponential: 60s, 120s, 240s...) |
-| `supervisor.lastHeartbeat` | string\|null | `null` | Last heartbeat timestamp (ISO 8601) |
-| `supervisor.status` | enum | `idle` | Supervisor state: `idle`, `running`, `stalled`, `dead` |
-
-**Examples:**
-```bash
-dev-harness config set supervisor.apiRetries 10
-dev-harness config set supervisor.backoffMs 30000
-```
 
 ## Full Example Config
 

@@ -35,6 +35,7 @@ export function getDefaultConfig() {
     agentTool: null,
     mode: 'copilot',
     currentPhase: null,
+    currentRole: null,
     paused: false,
     features: {
       remaining: 0,
@@ -42,12 +43,27 @@ export function getDefaultConfig() {
       total: 0,
     },
     gates: {
-      enabled: false,
+      // G12: gates ON by default (was false). Enforcement by default, permissive opt-out.
+      // Existing projects keep their explicit config (migration: don't force-on).
+      enabled: true,
       checks: ['all'],
       coverage: {
         enabled: false,
         threshold: COVERAGE_THRESHOLD_DEFAULT,
       },
+      cleanState: {
+        enabled: false,
+        stalePatterns: [],
+        startupCmd: null,
+      },
+      antiPlaceholder: {
+        enabled: true,
+        patterns: [],
+      },
+    },
+    cleanup: {
+      schedule: '0 2 * * 0',
+      autoFix: false,
     },
     git: {
       autoCommit: false,
@@ -81,13 +97,6 @@ export function getDefaultConfig() {
     phaseRetryCount: 0,
     pipelineIteration: 0,
     gateHistory: [],
-    supervisor: {
-      enabled: false,
-      apiRetries: 5,
-      backoffMs: 60000,
-      lastHeartbeat: null,
-      status: 'idle',
-    },
   };
 }
 
@@ -201,6 +210,8 @@ function resolveKey(obj, key) {
 
 /**
  * Set a dot-notation key on an object (mutates in-place).
+ * Auto-creates null/undefined parent objects (fixes G1: `config set stackMeta.x`
+ * no longer throws TypeError when stackMeta defaults to null).
  * @param {object} obj
  * @param {string} key
  * @param {any} value
@@ -209,7 +220,10 @@ function setKey(obj, key, value) {
   const parts = key.split('.');
   let current = obj;
   for (let i = 0; i < parts.length - 1; i++) {
-    if (!(parts[i] in current) || typeof current[parts[i]] !== 'object') {
+    // G1 fix: auto-create null/undefined/non-object parents as empty objects.
+    // Previously: `if (!(parts[i] in current) || typeof current[parts[i]] !== 'object')`
+    // threw TypeError when current[parts[i]] was null (stackMeta defaults to null).
+    if (current[parts[i]] === null || current[parts[i]] === undefined || typeof current[parts[i]] !== 'object') {
       current[parts[i]] = {};
     }
     current = current[parts[i]];
@@ -316,6 +330,9 @@ export async function transitionPhase(targetDir, toPhase) {
     config.phaseRetryCount = (config.phaseRetryCount || 0) + 1;
   }
 
+  // Capture the FROM phase before overwriting (for the progress.md history line).
+  const fromPhase = config.currentPhase;
+
   // Update phase
   config.currentPhase = toPhase;
 
@@ -332,6 +349,19 @@ export async function transitionPhase(targetDir, toPhase) {
   const saveResult = saveConfig(targetDir, config);
   if (!saveResult.ok) {
     return { ok: false, error: saveResult.error, config: null };
+  }
+
+  // G13/G14/G17: fire session boundary at phase transition (trigger #3).
+  // fireSessionBoundary writes the handoff snapshot (overwrite), runs the
+  // clean-state gate (advisory by default), and appends a progress.md history
+  // line. Kept best-effort: handoff never breaks the transition.
+  try {
+    const { fireSessionBoundary } = await import('./session-boundary.mjs');
+    await fireSessionBoundary(targetDir, 'phase-transition', {
+      progressAction: `phase transition: ${fromPhase || 'start'} → ${toPhase}`,
+    });
+  } catch (_e) {
+    // Non-fatal: handoff is best-effort, never break the transition.
   }
 
   return { ok: true, error: null, config };

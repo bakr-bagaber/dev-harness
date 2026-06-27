@@ -5,7 +5,7 @@ Google Gemini CLI reads GEMINI.md on startup.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool gemini --target my-project
+dev-harness init --stack node --agent-tool gemini --target my-project
 cd my-project
 ```
 

@@ -18,12 +18,12 @@
  */
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
-import { runChecks, getPhase, areGatesEnabled } from '../lib/gates.mjs';
+import { runChecks, getPhase, areGatesEnabled, checkRoleForValidate, checkSelfEvaluationGuard, checkCleanState } from '../lib/gates.mjs';
 import { loadConfig, set as configSet, syncFeatureSummary, resetTaskRetry, resetFeatureRetry } from '../lib/state.mjs';
 import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { loadFeatureList, saveFeatureList, runPhase, getNextFeature, getNextTask } from '../lib/ralph-inner.mjs';
+import { fireSessionBoundary } from '../lib/session-boundary.mjs';
 import { phaseLabel } from '../lib/command-helpers.mjs';
-import { renderDashboard } from '../lib/dashboard.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function validateCommand(args) {
@@ -34,6 +34,33 @@ export default async function validateCommand(args) {
   // Allow explicit --phase override
   const explicitPhase = args.flags?.phase;
   const phase = explicitPhase || getPhase(targetDir);
+
+  // G17: --session-exit runs ONLY the clean-state gate (5 conditions) and
+  // exits. Used to make clean-state fatal-on-demand at a session end. Requires
+  // gates.cleanState.enabled=true; otherwise reports disabled + exits 0.
+  const sessionExit = !!(args.flags?.['session-exit'] || args.flags?.sessionExit);
+  if (sessionExit) {
+    const cleanState = await checkCleanState(targetDir);
+    if (json) {
+      emitJson({
+        command: 'validate',
+        subcommand: 'session-exit',
+        phase,
+        status: cleanState.pass ? 'ok' : 'error',
+        message: cleanState.pass
+          ? 'Clean-state gate: PASS — all 5 conditions met'
+          : `Clean-state gate: FAIL — ${cleanState.detail}`,
+        checks: [cleanState],
+        overall: cleanState.pass,
+        failures: cleanState.pass ? [] : ['clean-state'],
+      });
+    } else {
+      const label = cleanState.pass ? '✓' : '✗';
+      emitHuman(`${label} Clean-state gate: ${cleanState.pass ? 'PASS' : 'FAIL'} — ${cleanState.detail}\n`);
+    }
+    if (!cleanState.pass) { process.exit(EXIT.VALIDATION_FAILURE); }
+    return;
+  }
 
   // Feature/task scoping for inner-loop per-task validation
   // NOTE: gates.mjs currently runs full phase-level checks.
@@ -73,6 +100,28 @@ export default async function validateCommand(args) {
       json,
     );
     return;
+  }
+
+  // G21: role-based gate enforcement — BUILD/VERIFY require currentRole=evaluator
+  const roleCheck = checkRoleForValidate(targetDir, phase);
+  if (!roleCheck.allowed) {
+    die(
+      new CliError(roleCheck.reason, EXIT.VALIDATION_FAILURE),
+      json,
+    );
+    return;
+  }
+
+  // G23: self-evaluation guard — evaluator can't validate work they produced
+  if (feature && task) {
+    const selfEvalCheck = checkSelfEvaluationGuard(targetDir, feature, task);
+    if (!selfEvalCheck.allowed) {
+      die(
+        new CliError(selfEvalCheck.reason, EXIT.VALIDATION_FAILURE),
+        json,
+      );
+      return;
+    }
   }
 
   // Run checks
@@ -133,10 +182,14 @@ export default async function validateCommand(args) {
       const t = feat && feat.tasks ? feat.tasks.find(tk => tk.id === task) : null;
       if (t) {
         t.status = 'complete';
+        // G23: record which role produced this task's work (for self-eval guard)
+        const { config: prodConfig } = loadConfig(targetDir);
+        if (prodConfig.currentRole) { t.producedByRole = prodConfig.currentRole; }
         // If all tasks in feature done, mark feature passing + reset feature retry
         if (feat.tasks.every(tk => tk.status === 'complete')) {
           feat.passes = true;
           if (feat.retryCount !== undefined) { feat.retryCount = 0; }
+          if (prodConfig.currentRole) { feat.producedByRole = prodConfig.currentRole; }
           resetFeatureRetry(loadConfig(targetDir).config);
         }
         saveFeatureList(targetDir, fl);
@@ -146,6 +199,19 @@ export default async function validateCommand(args) {
       configSet(targetDir, 'taskRetryCount', 0);
       // G10 fix: sync config.features summary so status shows live counts
       syncFeatureSummary(targetDir);
+      // G17: fire session boundary (trigger #1: task complete, or #2: feature
+      // complete when this was the last task). Advisory clean-state; never
+      // blocks the task completion. Result surfaced in JSON for visibility.
+      let taskBoundary = null;
+      try {
+        const isFeatureComplete = feat && feat.tasks.every(tk => tk.status === 'complete');
+        taskBoundary = await fireSessionBoundary(
+          targetDir,
+          isFeatureComplete ? 'feature-complete' : 'task-complete',
+        );
+      } catch {
+        // Non-fatal.
+      }
       // Get next task/feature instructions
       const nextResult = await runPhase(targetDir, phase, { json: true });
       out.nextTask = {
@@ -155,6 +221,9 @@ export default async function validateCommand(args) {
         task: nextResult.details?.taskId || null,
         taskDescription: nextResult.details?.taskDescription || null,
       };
+      if (taskBoundary && !taskBoundary.cleanState.pass) {
+        out.cleanState = taskBoundary.cleanState;
+      }
     }
 
     // Autopilot: auto-advance the outer pipeline when full phase gates pass
@@ -234,9 +303,13 @@ export default async function validateCommand(args) {
     const t = feat && feat.tasks ? feat.tasks.find(tk => tk.id === task) : null;
     if (t) {
       t.status = 'complete';
+      // G23: record which role produced this task's work (for self-eval guard)
+      const { config: prodConfig } = loadConfig(targetDir);
+      if (prodConfig.currentRole) { t.producedByRole = prodConfig.currentRole; }
       // If all tasks in feature done, mark feature passing
       if (feat.tasks.every(tk => tk.status === 'complete')) {
         feat.passes = true;
+        if (prodConfig.currentRole) { feat.producedByRole = prodConfig.currentRole; }
         emitHuman(`\n  ✓ Feature "${feat.name}" complete. All tasks done.\n`);
       } else {
         emitHuman(`\n  ✓ Task "${task}" complete.\n`);
@@ -248,8 +321,21 @@ export default async function validateCommand(args) {
     configSet(targetDir, 'taskRetryCount', 0);
     // G10 fix: sync config.features summary so status shows live counts
     syncFeatureSummary(targetDir);
+    // G17: fire session boundary (trigger #1/#2: task/feature complete).
+    // Advisory clean-state; surface a warning to the human if it fails.
+    try {
+      const isFeatureComplete = feat && feat.tasks.every(tk => tk.status === 'complete');
+      const boundary = await fireSessionBoundary(
+        targetDir,
+        isFeatureComplete ? 'feature-complete' : 'task-complete',
+      );
+      if (!boundary.cleanState.pass) {
+        emitHuman(`  ⚠ Clean-state: ${boundary.cleanState.detail}\n`);
+      }
+    } catch {
+      // Non-fatal.
+    }
     // Render updated dashboard showing task completion + next task
-    renderDashboard(targetDir);
     // Run inner loop to get next feature/task instructions
     // runPhase prints the instructions to stdout
     const nextResult = await runPhase(targetDir, phase, { json: false });
@@ -268,7 +354,6 @@ export default async function validateCommand(args) {
         emitHuman(`\n✓ Pipeline complete. All phases done.\n`);
       }
       // Render updated dashboard showing new current phase
-      renderDashboard(targetDir);
     }
   }
 

@@ -140,43 +140,95 @@ export default async function configCommand(args) {
 
   // ── set ──────────────────────────────────────────────────────────────────
   if (sub === 'set') {
-    if (pos.length < 2) {
+    // G2 fix: --json-value flag reads array/object values from stdin or @file,
+    // bypassing shell quoting issues (e.g. `config set phases.enabled --json-value '["a","b"]'`).
+    const jsonValueFlag = args.flags?.['json-value'];
+    const usingJsonValue = jsonValueFlag !== undefined;
+
+    if (usingJsonValue) {
+      if (pos.length < 1) {
+        die(new CliError(
+          'Usage: dev-harness config set <key> --json-value <json>\n' +
+          '  <json> can be a JSON string, @file to read from a file, or - to read from stdin',
+          EXIT.USAGE_ERROR,
+        ), json);
+        return;
+      }
+    } else if (pos.length < 2) {
       die(new CliError(
         'Usage: dev-harness config set <key> <value>\n' +
         '  String values: config set mode copilot\n' +
         '  Boolean values: config set gates.enabled true\n' +
-        '  Numeric values: config set maxRetries 5',
+        '  Numeric values: config set maxRetries 5\n' +
+        '  Array/object values: config set phases.enabled --json-value \'["define","plan"]\'\n' +
+        '  Or read from file: config set stackMeta --json-value @config.json',
         EXIT.USAGE_ERROR,
       ), json);
       return;
     }
 
     const key = pos[0];
-    const rawValue = pos.slice(1).join(' '); // support multi-word values
-
-    // Get parameter metadata for type-aware coercion
+    let rawValue;
+    let parsedValue;
+    // Get parameter metadata for type-aware coercion (used by both branches)
     const meta = getParamMeta(key);
 
-    // Type coercion: try JSON for arrays/objects, then numbers and booleans
-    let parsedValue;
-    if (meta && (meta.type === 'array' || meta.type === 'object')) {
-      // Array/object types: parse as JSON
+    if (usingJsonValue) {
+      const jsonSpec = jsonValueFlag === true ? '-' : String(jsonValueFlag);
+      if (jsonSpec === '-') {
+        // Read from stdin
+        try {
+          const { readFileSync } = await import('node:fs');
+          rawValue = readFileSync(0, 'utf-8').trim();
+        } catch (err) {
+          emitCmdError({ command: 'config', subcommand: 'set', json, key, message: `Failed to read JSON from stdin: ${err.message}` });
+          process.exit(EXIT.INTERNAL_ERROR);
+          return;
+        }
+      } else if (jsonSpec.startsWith('@')) {
+        // Read from file
+        try {
+          const { readFileSync } = await import('node:fs');
+          rawValue = readFileSync(jsonSpec.slice(1), 'utf-8').trim();
+        } catch (err) {
+          emitCmdError({ command: 'config', subcommand: 'set', json, key, message: `Failed to read JSON from file: ${err.message}` });
+          process.exit(EXIT.INTERNAL_ERROR);
+          return;
+        }
+      } else {
+        rawValue = jsonSpec;
+      }
+      // Parse as JSON (strict — --json-value always means JSON)
       try {
         parsedValue = JSON.parse(rawValue);
-      } catch {
-        // If JSON parse fails, keep as string (let type check below catch it)
+      } catch (err) {
+        emitCmdError({ command: 'config', subcommand: 'set', json, key, message: `Invalid JSON: ${err.message}` });
+        process.exit(EXIT.USAGE_ERROR);
+        return;
+      }
+    } else {
+      rawValue = pos.slice(1).join(' '); // support multi-word values
+
+      // Type coercion: try JSON for arrays/objects, then numbers and booleans
+      if (meta && (meta.type === 'array' || meta.type === 'object')) {
+        // Array/object types: parse as JSON
+        try {
+          parsedValue = JSON.parse(rawValue);
+        } catch {
+          // If JSON parse fails, keep as string (let type check below catch it)
+          parsedValue = rawValue;
+        }
+      } else if (rawValue === 'true') {
+        parsedValue = true;
+      } else if (rawValue === 'false') {
+        parsedValue = false;
+      } else if (/^-?\d+(\.\d+)?$/.test(rawValue)) {
+        parsedValue = Number(rawValue);
+      } else if (rawValue === 'null') {
+        parsedValue = null;
+      } else {
         parsedValue = rawValue;
       }
-    } else if (rawValue === 'true') {
-      parsedValue = true;
-    } else if (rawValue === 'false') {
-      parsedValue = false;
-    } else if (/^-?\d+(\.\d+)?$/.test(rawValue)) {
-      parsedValue = Number(rawValue);
-    } else if (rawValue === 'null') {
-      parsedValue = null;
-    } else {
-      parsedValue = rawValue;
     }
 
     // Validate against config-registry if parameter is known

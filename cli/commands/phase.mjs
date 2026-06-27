@@ -14,12 +14,11 @@ import { runPhase, getPhaseType } from '../lib/ralph-inner.mjs';
 import { continuePipeline } from '../lib/ralph-outer.mjs';
 import { promptYesNo, shouldConfirmGates, shouldAutoPrompt } from '../lib/modes.mjs';
 import { parseCommandArgs, phaseLabel } from '../lib/command-helpers.mjs';
-import { renderDashboard } from '../lib/dashboard.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function phaseCommand(args) {
   const { json, targetDir, gitOps } = parseCommandArgs(args);
-  const phase = args.subcommand;
+  let phase = args.subcommand;
 
   // Load config to get enabled phases (e.g. simplify may be enabled)
   const { config: cfg, ok: cfgOk } = loadConfig(targetDir);
@@ -30,7 +29,7 @@ export default async function phaseCommand(args) {
   if (!phase) {
     die(
       new CliError(
-        `Phase name required.\nValid phases: ${validPhases.join(', ')}`,
+        `Phase name required.\nValid phases: ${validPhases.join(', ')}, or "next" to advance`,
         EXIT.USAGE_ERROR,
       ),
       json,
@@ -38,10 +37,48 @@ export default async function phaseCommand(args) {
     return;
   }
 
+  // ── "phase next" — auto-advance to next phase ────────────────────────
+  // Checks gates first (if enabled), then transitions. This is the primary
+  // command AI agents call to advance through the pipeline.
+  if (phase === 'next') {
+    const currentPhase = cfgOk ? cfg.currentPhase : null;
+    const currentIdx = currentPhase ? validPhases.indexOf(currentPhase) : -1;
+    if (currentIdx < 0) {
+      // No current phase — start from first
+      phase = validPhases[0];
+    } else if (currentIdx < validPhases.length - 1) {
+      phase = validPhases[currentIdx + 1];
+    } else {
+      const msg = 'Pipeline already complete — no next phase.';
+      if (json) {
+        emitJson({ command: 'phase', status: 'complete', message: msg, currentPhase });
+      } else {
+        emitHuman(`  ✓ ${msg}\n`);
+      }
+      return;
+    }
+
+    // Check gates before advancing (if gates enabled)
+    if (cfgOk && cfg.gates?.enabled && currentPhase) {
+      const { runChecks } = await import('../lib/gates.mjs');
+      const gateResult = await runChecks(targetDir, currentPhase);
+      if (!gateResult.overall) {
+        const msg = `Cannot advance: gate validation failed for ${currentPhase.toUpperCase()}. Failures: ${gateResult.failures.join(', ')}. Run: dev-harness validate`;
+        if (json) {
+          emitJson({ command: 'phase', status: 'error', message: msg, phase: currentPhase, failures: gateResult.failures });
+        } else {
+          emitHuman(`  ✗ ${msg}\n`);
+        }
+        process.exit(EXIT.VALIDATION_FAILURE);
+        return;
+      }
+    }
+  }
+
   if (!validPhases.includes(phase)) {
     die(
       new CliError(
-        `Invalid phase "${phase}". Valid: ${validPhases.join(', ')}`,
+        `Invalid phase "${phase}". Valid: ${validPhases.join(', ')}, or "next"`,
         EXIT.USAGE_ERROR,
       ),
       json,
@@ -84,7 +121,6 @@ export default async function phaseCommand(args) {
   const phaseType = getPhaseType(phase);
 
   // Render dashboard showing current pipeline state
-  renderDashboard(targetDir, { json });
 
   // Run the inner loop for this phase
   const loopResult = await runPhase(targetDir, phase, { json, gitOps });

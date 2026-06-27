@@ -1,16 +1,16 @@
 # Progress: {{stackLabel}}
 
-## Session State
+<!-- Append-only history log. Current state lives in harness/session-handoff.md
+     (written at every session boundary by fireSessionBoundary). -->
 
-Current Phase: not started
-Current Feature: —
-Gate Status: pending
-Next Action: —
-Retry Count: 0/{{maxRetries}}
+## History
+
+<!-- Session boundaries (role handoff, phase transition, task/feature complete,
+     pause) append a line here automatically. Format: ISO timestamp | action -->
 
 ## Lessons
 
-<!-- Use \`dev-harness learn "lesson here"\` to add lessons. -->
+<!-- Use `dev-harness learn "lesson here"` to add lessons. -->
 
 ## Checkpoints
 

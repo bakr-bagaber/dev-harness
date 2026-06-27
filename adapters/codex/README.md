@@ -1,7 +1,7 @@
 # Codex CLI Adapter
 
 Codex CLI reads `AGENTS.md` from the project root natively — no tool-specific
-file is needed. When you scaffold with `harness-dev init --agent-tool codex`,
+file is needed. When you scaffold with `dev-harness init --agent-tool codex`,
 the harness sets `agentTool: "codex"` in config but does not generate any
 extra files (AGENTS.md is already the canonical entry point).
 
@@ -9,7 +9,7 @@ extra files (AGENTS.md is already the canonical entry point).
 
 ```bash
 # Scaffold with Codex adapter
-harness-dev init --stack node --agent-tool codex --target my-project
+dev-harness init --stack node --agent-tool codex --target my-project
 cd my-project
 
 # Codex reads AGENTS.md automatically
@@ -25,7 +25,7 @@ codex
 
 Codex CLI reads `AGENTS.md` on startup. The generated `AGENTS.md` includes
 the harness quick-start, phase pipeline, agent roles, and commands. Codex
-then follows the phase instructions emitted by `harness-dev phase <name>`
-and runs `harness-dev validate` after each phase.
+then follows the phase instructions emitted by `dev-harness phase <name>`
+and runs `dev-harness validate` after each phase.
 
 No `.codexrules` or similar file is needed — AGENTS.md is the standard.

@@ -5,7 +5,7 @@ Windsurf (Codeium) reads .windsurfrules as system context.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool windsurf --target my-project
+dev-harness init --stack node --agent-tool windsurf --target my-project
 cd my-project
 ```
 

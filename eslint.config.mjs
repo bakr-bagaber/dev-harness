@@ -1,6 +1,6 @@
 /**
  * ESLint flat config — supports .mjs (ESM) files.
- * Zero-dependency CLI project — lint only the cli/ directory.
+ * Lints both cli/ and test/ directories.
  */
 import js from '@eslint/js';
 

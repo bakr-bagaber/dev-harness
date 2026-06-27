@@ -5,7 +5,7 @@ Kilo Code reads .kilocoderules.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool kilo-code --target my-project
+dev-harness init --stack node --agent-tool kilo-code --target my-project
 cd my-project
 ```
 

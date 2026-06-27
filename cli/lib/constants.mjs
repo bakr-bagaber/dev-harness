@@ -43,17 +43,3 @@ export const STACK_SCAN_DEPTH = 2;
 
 /** File mode for executable scripts (init.sh). */
 export const EXECUTABLE_MODE = 0o755;
-
-// ── Supervisor / Orchestrator constants ─────────────────────────────────────
-
-/** Default max API retry attempts before pausing pipeline. */
-export const API_MAX_RETRIES = 5;
-
-/** Base backoff delay in ms for API retries (exponential: 60s, 120s, 240s, ...). */
-export const API_BACKOFF_MS = 60000;
-
-/** Supervisor heartbeat interval in ms. */
-export const SUPERVISOR_INTERVAL_MS = 60000;
-
-/** Max heartbeat staleness before stall detection (5 min). */
-export const SUPERVISOR_MAX_STALLS = 3;

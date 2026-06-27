@@ -1,139 +1,45 @@
-# Tool Integration Guide
+# Tool Integration
 
-dev-harness is agent-agnostic by design. It works with any coding agent that
-can read files and run shell commands. This guide covers integration with
-specific tools.
+## Architecture: Agent-as-Frontend
 
-## Quick Start
+Dev Harness is a **backend CLI**. Your coding agent is the **frontend** — it reads
+instruction files and calls CLI commands to follow the workflow.
 
-```bash
-# Scaffold with a specific agent tool
-dev-harness init --stack node --agent-tool claude-code --target my-project
-
-# Or scaffold generically (AGENTS.md only — works with most tools)
-dev-harness init --stack node --target my-project
-
-# Detect which tools are configured in an existing project
-dev-harness detect-tool --target my-project
+```
+User → starts coding agent → agent reads AGENTS.md → agent calls dev-harness CLI
 ```
 
-## How It Works
+1. **`dev-harness init`** scaffolds the project with `AGENTS.md` + phase skills
+2. **Agent reads `AGENTS.md`** (or its tool-specific file) — sees the workflow:
+   - `dev-harness status` → check current phase (clock-in)
+   - Read `harness/docs/phases/<phase>.md` → phase skill
+   - Do the work
+   - `dev-harness validate` → check gates
+   - `dev-harness phase next` → advance
+3. **Agent calls CLI commands** to progress through the pipeline
+4. **Dev Harness enforces** gates, phase order, role separation, and state via the CLI backend
 
-dev-harness supports two integration models depending on tool type:
+No spawning, no orchestrator, no TUI — the agent tool's native UI is the interface.
 
-### Tier 1 — Orchestrator Mode (Spawnable Tools)
+## Agent Tool Selection
 
-For CLI/TUI tools (Hermes, OpenClaw, Claude Code), dev-harness can **spawn the agent
-per task** with a fresh session, monitor for completion, handle API downtime, and
-auto-advance through the pipeline:
-
-```bash
-# Select your backend tool (interactive wizard)
-dev-harness select-tool
-
-# Start the orchestrator — spawns agent per task, live dashboard
-dev-harness run --agent-tool hermes
-```
-
-Each task gets:
-- **Fresh session** — no continuous session (Ralph pattern requirement)
-- **Task prompt** — written to `harness/current-task.md`, passed to agent
-- **Automatic validation** — gates run after agent exits
-- **API resilience** — exponential backoff on API errors (60s, 120s, 240s...)
-- **Live dashboard** — phases/features/tasks with checkmarks + agent output
-
-### Tier 2 — Instruction Mode (IDE Tools)
-
-For IDE extensions (Cursor, Copilot, Windsurf, etc.), dev-harness emits **generic
-phase instructions** via stdout. The agent reads its config file and follows them:
-
-1. Agent reads `AGENTS.md` (or tool-specific file like `CLAUDE.md`)
-2. User runs `dev-harness phase <name>` — CLI prints instructions for the agent
-3. Agent does the work, then runs `dev-harness validate`
-4. Gate passes → next phase; gate fails → agent retries with feedback
-
-No tool-specific protocol is needed — the contract is text in, text out.
-
-## Supported Tools (18 tools)
-
-### Tier 1 — Deep Integration (Spawnable, Orchestrator Mode)
-
-These tools support `dev-harness run` for autonomous pipeline execution with
-fresh sessions, API retry, and live dashboard.
-
-| Tool | Flag | Spawn Command | Notes |
-|------|------|---------------|-------|
-| **Hermes** | `--agent-tool hermes` | `hermes --task <file> --fresh-session --exit-on-complete` | Full adapter with SKILL.md + spawn.mjs |
-| **OpenClaw** | `--agent-tool openclaw` | `openclaw --non-interactive --exit-on-complete` | Reads AGENTS.md, task via stdin |
-| **Claude Code** | `--agent-tool claude-code` | `claude -p --dangerously-skip-permissions <prompt>` | Non-interactive print mode |
-
-### Tier 2 — Instruction-Based (IDE Tools, Manual Workflow)
-
-#### Tools with a specific rules file (generated from AGENTS.md content)
-
-| Tool | Flag | File | Notes |
-|------|------|------|-------|
-| **Claude Code** | `--agent-tool claude-code` | `CLAUDE.md` | Reads CLAUDE.md on startup |
-| **Cursor** | `--agent-tool cursor` | `.cursorrules` | Loads as system context |
-| **Windsurf** | `--agent-tool windsurf` | `.windsurfrules` | Codeium's rules file |
-| **Gemini CLI** | `--agent-tool gemini` | `GEMINI.md` | Google Gemini CLI |
-| **GitHub Copilot** | `--agent-tool copilot` | `.github/copilot-instructions.md` | Copilot instructions |
-| **Cline** | `--agent-tool cline` | `.clinerules` | VS Code extension |
-| **Roo Code** | `--agent-tool roo` | `.roorules` | Roo Code rules |
-| **Kilo Code** | `--agent-tool kilo-code` | `.kilocoderules` | Kilo Code rules |
-| **Amazon Q** | `--agent-tool amazon-q` | `.amazonq/rules.md` | Amazon Q Developer |
-
-### Tools that read AGENTS.md natively (no extra file)
-
-| Tool | Flag | Notes |
-|------|------|-------|
-| **Codex CLI** | `--agent-tool codex` | Reads AGENTS.md from project root |
-| **OpenCode** | `--agent-tool opencode` | Reads AGENTS.md |
-| **Continue** | `--agent-tool continue` | Reads AGENTS.md |
-| **Aider** | `--agent-tool aider` | Auto-discovers AGENTS.md |
-| **Generic** | (default, no flag) | AGENTS.md only — works with any tool |
-
-### Tools with unconfirmed formats (assumed AGENTS.md)
-
-| Tool | Flag | Notes |
-|------|------|-------|
-| **Antigravity 2** | `--agent-tool antigravity` | IDE/CLI/SDK — assumed AGENTS.md |
-| **OpenClaw** | `--agent-tool openclaw` | Assumed AGENTS.md |
-| **Pi** | `--agent-tool pi` | Assumed AGENTS.md |
-
-### Special adapter
-
-| Tool | Flag | Notes |
-|------|------|-------|
-| **Hermes** | `--agent-tool hermes` | Uses SKILL.md + wrapper scripts + spawn.mjs in `adapters/hermes/` |
-
-### Per-tool examples
+Use `--agent-tool` at init to generate tool-specific instruction files:
 
 ```bash
-# Claude Code
-dev-harness init --stack node --agent-tool claude-code --target my-project
+# AGENTS.md only (works with any agent that reads it)
+dev-harness init --stack node
 
-# Cursor
-dev-harness init --stack node --agent-tool cursor --target my-project
+# Generate a skill manifest (SKILL.md + wrapper scripts)
+dev-harness init --stack node --agent-tool skill
 
-# Windsurf
-dev-harness init --stack node --agent-tool windsurf --target my-project
+# Multiple tools (comma-separated)
+dev-harness init --stack node --agent-tool skill,skill2
 
-# Gemini CLI
-dev-harness init --stack node --agent-tool gemini --target my-project
-
-# GitHub Copilot
-dev-harness init --stack node --agent-tool copilot --target my-project
-
-# Cline
-dev-harness init --stack node --agent-tool cline --target my-project
-
-# Codex (reads AGENTS.md natively)
-dev-harness init --stack node --agent-tool codex --target my-project
-
-# Generic (default — AGENTS.md only)
-dev-harness init --stack node --target my-project
+# All supported tools
+dev-harness init --stack node --agent-tool all
 ```
+
+> **All instruction files are generated from `AGENTS.md` content** — single source of truth.
 
 ## Adapter Architecture
 
@@ -141,147 +47,129 @@ Each tool has an adapter directory under `adapters/`:
 
 ```
 adapters/
-├── hermes/              — SKILL.md + wrapper scripts + spawn.mjs + templates
-├── openclaw/            — README + spawn.mjs (reads AGENTS.md natively)
-├── claude-code/         — README + spawn.mjs (CLAUDE.md template)
-├── cursor/              — .cursorrules.template + README
+├── skill/               — SKILL.md + wrapper scripts + templates symlink
+├── claude-code/         — README (CLAUDE.md generated from AGENTS.md)
+├── cursor/              — README (.cursorrules generated from AGENTS.md)
 ├── codex/               — README (reads AGENTS.md natively)
+├── opencode/            — README (reads AGENTS.md natively)
+├── antigravity/         — README (reads AGENTS.md natively)
+├── openclaw/            — README (reads AGENTS.md natively)
 └── generic/             — README (default, AGENTS.md only)
 ```
 
-**Tier-1 adapters** include a `spawn.mjs` module that implements the spawn interface:
-- `spawnAgent({ taskPrompt, taskFile, targetDir })` — start a fresh agent process
-- `detectCompletion(proc)` — return 'success' | 'failure' | 'api-error' | 'running'
-- `killAgent(proc)` — gracefully terminate
-- `isAvailable()` — check if tool CLI is installed
+Adapters are documentation + (for skill) wrapper scripts. The CLI core stays
+tool-agnostic. `init --agent-tool <name>` generates the tool-specific instruction
+file from AGENTS.md content.
 
-**Tier-2 adapters** are template files + documentation only. The CLI core
-stays tool-agnostic. `init --agent-tool <name>` renders the adapter template
-with stack variables and writes it to the target project.
+## Workflow Enforcement
 
-## Orchestrator Mode (`dev-harness run`)
+Dev Harness enforces the workflow through the CLI backend:
 
-For Tier-1 tools, the orchestrator provides fully autonomous pipeline execution:
+| Enforcement | Mechanism | How |
+|-------------|-----------|-----|
+| **Gate validation** | `dev-harness validate` | Runs deterministic checks per phase — must pass before advancing |
+| **Phase order** | `dev-harness phase next` | Enforces define→plan→build→verify→review→ship — can't skip |
+| **State tracking** | `harness/config.json` | Tracks current phase, feature, task, retry counts |
+| **Role gates** | `dev-harness role` | BUILD/VERIFY validate requires evaluator; contract propose requires planner |
+| **Self-eval guard** | `producedByRole` tracking | Evaluator can't validate work they produced |
+| **Instructions** | `AGENTS.md` + phase skills | Agent tools natively read instruction files |
 
-```bash
-# Select tool first (stores in config.agentTool)
-dev-harness select-tool hermes
+The agent cannot advance without:
+1. Passing gates (`validate` returns PASS)
+2. Calling `phase next` (which checks gates first)
 
-# Start orchestrator — spawns Hermes per task, live TUI dashboard
-dev-harness run
+## Retry Configuration
 
-# Or override tool for this run only
-dev-harness run --agent-tool claude-code
-
-# Disable TUI — one-shot text output (for logs/CI)
-dev-harness run --agent-tool hermes --no-tui
-
-# JSON output (machine-parseable, no TUI)
-dev-harness run --agent-tool hermes --json
-```
-
-### Live TUI Dashboard
-
-When run in a terminal, `dev-harness run` launches a live split-pane TUI dashboard (powered by Ink):
-
-- **Top pane** — pipeline state: phases with checkmarks, current feature/task, mode, retry count
-- **Bottom pane** — scrolling agent output (stdout streams in real time)
-- **Keyboard controls** — `p` pause, `r` resume, `q`/`Esc` quit, `Ctrl+C` safe exit
-
-The TUI automatically falls back to one-shot text rendering when:
-- stdout is not a TTY (piped to file, CI environment)
-- `--no-tui` flag is passed
-- `--json` flag is passed
-
-See the [README TUI section](../README.md#️-live-tui-dashboard) for full details.
-
-### What the Orchestrator Does
-
-1. Reads current pipeline state (phase, feature, task)
-2. Builds task prompt → writes to `harness/current-task.md`
-3. Spawns agent with fresh session (per tool's spawn adapter)
-4. Monitors process: success → validate; failure → retry; API error → backoff
-5. On validation pass: marks task complete, advances to next task
-6. On validation fail: follows the 3-level retry escalation chain (task → feature → phase → human), each level toggleable via `retry.*.enabled` with its own `retry.*.maxRetries` budget. See [CONFIGURATION.md](CONFIGURATION.md#retry-v310) and ADR 2026-06-25 in `history/decisions.md`.
-7. Renders live dashboard on every transition
-8. Graceful shutdown on Ctrl+C (pauses pipeline, saves state)
-
-### API Downtime Resilience
-
-When the agent's API goes down (connection refused, timeout, rate limit, 503):
-- Exponential backoff: 60s → 120s → 240s → 480s → 960s
-- Up to `supervisor.apiRetries` attempts (default 5)
-- After exhaustion: pauses pipeline, notifies human
-- Resume with `dev-harness resume` when API recovers
-
-### Backend Tool Selection
+The 3-level retry escalation chain (task → feature → phase → human) is
+configurable via `config set`:
 
 ```bash
-# Interactive wizard — shows installed tools with capabilities
-dev-harness select-tool
+# Enable feature-level retry
+dev-harness config set retry.features.enabled true
 
-# List all tools
-select-tool --list
+# Enable phase-level retry
+dev-harness config set retry.phases.enabled true
 
-# Direct selection
-select-tool hermes
+# Set retry budgets
+dev-harness config set retry.tasks.maxRetries 5
+dev-harness config set retry.features.maxRetries 3
+dev-harness config set retry.phases.maxRetries 2
 ```
 
-## Adding a New Tool
+See [CONFIGURATION.md](CONFIGURATION.md) for full reference.
 
-### Tier 2 (Instruction-Based)
+## Multi-Agent Role Framework (G20-G23)
 
-1. Add an entry to `TOOL_REGISTRY` in `cli/lib/tool-registry.mjs`:
-   ```javascript
-   'new-tool': {
-     label: 'New Tool',
-     file: '.newtoolrules',        // or null if it reads AGENTS.md
-     header: '# New Tool rules\n', // optional prefix
-     detectionFiles: ['.newtoolrules'],
-     notes: 'New Tool reads .newtoolrules.',
-   },
-   ```
-2. Add the tool name to the `agentTool` enum in `schema/harness-config.schema.json`
-3. Create `adapters/<tool-name>/README.md` documenting the integration
-4. If the tool has special needs (wrapper scripts, manifest), mark `special: true`
-   and create the full adapter directory
+The harness implements a planner/generator/evaluator/simplifier committee via
+**separate agent sessions per role** (not harness-spawned — backend-only).
 
-### Tier 1 (Spawnable)
+### How it works
 
-In addition to the Tier 2 steps:
+1. Each role = a separate agent session
+2. `dev-harness role <name>` sets `currentRole`, fires the session boundary (writes handoff + clean-state check), and prints the role skill
+3. Role-based gates enforce separation:
+   - `validate` in BUILD/VERIFY requires `currentRole=evaluator` (G21)
+   - `contract propose` requires `currentRole=planner` (G21)
+   - `contract review` requires `currentRole=evaluator` (G21)
+4. Self-evaluation guard (G23): evaluator can't validate work they produced (`producedByRole === currentRole` → blocked)
 
-5. Create `adapters/<tool-name>/spawn.mjs` implementing the spawn interface:
-   ```javascript
-   export async function spawnAgent({ taskPrompt, taskFile, targetDir, streamOutput }) {
-     // Spawn the tool's CLI with a fresh session
-     // Return { process }
-   }
-   export function detectCompletion(proc) { ... }
-   export function killAgent(proc) { ... }
-   export function isAvailable() { ... }
-   ```
-6. Add the tool to `SPAWNABLE_TOOLS` and `ADAPTER_LOADERS` in `cli/commands/run.mjs`
-7. Add the tool to `TIER1_TOOLS` in `cli/commands/select-tool.mjs`
+### Role transition = session boundary
 
-That's it — `init --agent-tool new-tool`, `select-tool`, and `run` will work automatically.
+Each `dev-harness role <name>` call is a session boundary (trigger #7). The harness:
+- Writes `harness/session-handoff.md` (overwrite — clock-out snapshot)
+- Runs the clean-state gate (advisory)
+- Appends to `harness/progress.md` (history log)
 
-## detect-tool Command
+The next session reads the handoff first (clock-in) to resume from the exact state.
+
+## Session Restart Enforcement (G25)
+
+Fresh-context boundaries depend on agent tool capabilities.
+
+### Agents that support session-end-on-completion — full enforcement
+
+Agents that support `--exit-on-complete` + `--fresh-session` can enforce a full
+fresh-context boundary via an external shell loop (the "Ralph loop"):
 
 ```bash
-dev-harness detect-tool --target my-project --json
+#!/bin/bash
+# Ralph loop — fresh context per task, full enforcement
+cd /path/to/project
+
+while ! dev-harness status --json | grep -q '"status":"complete"'; do
+  # Get the next action from the handoff
+  NEXT=$(dev-harness status --json | jq -r .nextAction)
+
+  # Run your agent with a FRESH session (no context carryover)
+  your-agent --task "$NEXT" --fresh-session --exit-on-complete
+
+  # Validate the work
+  dev-harness validate --json
+
+  # Advance if gates pass
+  dev-harness phase next --json
+done
 ```
 
-```json
-{
-  "command": "detect-tool",
-  "status": "ok",
-  "available": ["claude-code", "codex", "opencode", "aider", "continue"],
-  "configured": "claude-code",
-  "recommended": "claude-code",
-  "hasAgentsMd": true
-}
-```
+This guarantees a fresh agent context at every task boundary — the strongest
+form of context isolation available.
 
-Scans for tool-specific files + reads `config.agentTool`. Useful for
-understanding which tools will pick up the harness instructions in a
-multi-tool project.
+### Interactive agents — advisory only
+
+Interactive agents that cannot programmatically restart sessions get partial
+enforcement. Fresh context is **human-controlled**:
+
+- The harness still enforces the *what* (role separation via G21 gates, clean
+  handoffs, state tracking) regardless of session freshness
+- The human must manually start a new session at each role transition
+- `dev-harness role <name>` writes the handoff so the new session can clock-in
+
+### What the harness enforces regardless of agent
+
+| Enforcement | All agents | Session-end-capable agents |
+|-------------|-----------|---------------------------|
+| Role separation (G21 gates) | ✅ | ✅ |
+| Self-eval guard (G23) | ✅ | ✅ |
+| Clean handoff at boundaries | ✅ | ✅ |
+| Clean-state gate (G17) | ✅ | ✅ |
+| Fresh context per session | ❌ (human-controlled) | ✅ (via Ralph loop) |

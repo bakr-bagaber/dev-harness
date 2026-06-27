@@ -1,40 +1,41 @@
 # SIMPLIFY Phase
 
-**Loop mode:** Feature-iterate
-**Unit of work:** One feature simplified
-**Primary agent:** Simplifier
+## Overview
+Reduce code complexity without changing behavior. Remove dead code, consolidate
+duplicates, flatten deep nesting, and ensure tests still pass after changes.
 
-## Purpose
+## When to Use
+- VERIFY phase complete (optional phase — only if enabled in config)
+- Code works but has accumulated complexity during build
 
-Relentless clarity. Delete more than you add. Each feature gets a simplification
-pass: remove dead code, collapse duplication, tighten names. Simplifications
-must not break the feature's acceptance criteria.
+## Process
+1. Read `harness/progress.md` and `AGENTS.md`
+2. Run `dev-harness status` to see current state
+3. For each feature:
+   a. Review code for: code smells, deep nesting, DRY violations, dead code
+   b. Simplify: consolidate duplicate logic, flatten conditionals, remove unused
+   c. Run `{{testCmd}}` to ensure tests still pass after simplification
+   d. Run `dev-harness validate --feature <id> --task <id>` per task
+4. When all features simplified → run `dev-harness validate` (full phase)
+5. If PASS → `dev-harness phase next` to advance to REVIEW
 
-## Entry
+## Rationalizations to Avoid
+| Excuse | Rebuttal |
+|--------|----------|
+| "It works, don't touch it" | Working code with high complexity is a liability |
+| "Simplification risks breaking things" | Tests catch breakage — that's what they're for |
+| "I'll clean up later" | Later never comes — simplify now while context is fresh |
 
-- VERIFY gate passed
-- `simplify` enabled in `harness-config.json` (`phases.enabled` includes `simplify`)
+## Red Flags
+- Tests fail after simplification — you changed behavior, not just structure
+- Simplification removed more than 20% of code — may have removed needed logic
+- No tests to verify behavior preserved — add tests before simplifying
 
-## Work
-
-1. Read `progress.md` and `AGENTS.md`.
-2. For each feature: review the implementation, propose deletions/renames.
-3. Apply simplifications.
-4. Re-run `dev-harness validate --feature <name>` — criteria must still pass.
-5. On pass: commit, append lesson.
-6. On fail (≤ `maxRetries`): revert and retry.
-7. On fail (> `maxRetries`): escalate.
-
-## Exit Gate
-
-Run `dev-harness validate` — checks:
-
-- `config-exists`
-- `git-repo`
-- `git-clean`
-- `no-empty-dirs` — no empty directories (cleanup dead structure)
-- All features still pass their criteria
+## Verification
+- [ ] Code smells reduced (subjective — use judgment)
+- [ ] No new dead code introduced
+- [ ] Tests still pass: `{{testCmd}}`
+- [ ] `dev-harness validate` passes
 
 ## Handoff
-
-On gate pass: `dev-harness phase review` (Simplifier → multi-agent committee).
+On gate pass: `dev-harness phase next` (Simplifier → Evaluator for REVIEW)

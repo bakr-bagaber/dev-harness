@@ -74,20 +74,42 @@ export default async function initCommand(args) {
   const json = !!(args.json || args.flags?.json);
   const force = args.flags?.force === true || args.flags?.force === 'true';
   const noGit = args.flags?.['no-git'] === true || args.flags?.['no-git'] === 'true';
-  const agentTool = args.flags?.['agent-tool'] || null;
+  const noGates = args.flags?.['no-gates'] === true || args.flags?.['no-gates'] === 'true';
+  const agentToolRaw = args.flags?.['agent-tool'] || null;
   const mode = args.flags?.mode || null;
 
-  // Validate agent-tool if specified
-  if (agentTool && !KNOWN_AGENT_TOOLS.includes(agentTool)) {
-    die(
-      new CliError(
-        `Unknown agent tool "${agentTool}". Valid: ${KNOWN_AGENT_TOOLS.join(', ')}`,
-        EXIT.USAGE_ERROR,
-      ),
-      json,
-    );
-    return;
+  // Parse agent-tool: supports "all", comma-separated list, or single tool
+  // "all" → generate all tool-specific files (CLAUDE.md, .cursorrules, etc.)
+  // "claude-code,cursor" → generate both
+  // "claude-code" → generate just CLAUDE.md
+  // null → AGENTS.md only (no tool-specific file)
+  let agentTools = [];
+  if (agentToolRaw === 'all') {
+    // All tools that have a tool-specific file (file !== null)
+    agentTools = KNOWN_AGENT_TOOLS.filter(t => {
+      const entry = getToolEntry(t);
+      return entry && entry.file;
+    });
+  } else if (agentToolRaw) {
+    agentTools = agentToolRaw.split(',').map(t => t.trim()).filter(Boolean);
   }
+
+  // Validate each agent tool
+  for (const t of agentTools) {
+    if (!KNOWN_AGENT_TOOLS.includes(t)) {
+      die(
+        new CliError(
+          `Unknown agent tool "${t}". Valid: ${KNOWN_AGENT_TOOLS.join(', ')}, or "all"`,
+          EXIT.USAGE_ERROR,
+        ),
+        json,
+      );
+      return;
+    }
+  }
+
+  // For config: store first tool as agentTool (primary), or null if none
+  const agentTool = agentTools.length > 0 ? agentTools[0] : null;
 
   // Validate mode if specified
   const VALID_MODES = ['copilot', 'autopilot'];
@@ -282,16 +304,21 @@ export default async function initCommand(args) {
     errors.push(`.gitignore: ${err.message}`);
   }
 
-  // 5b. Agent-tool file (e.g. CLAUDE.md, .cursorrules, .windsurfrules)
+  // 5b. Agent-tool files (e.g. CLAUDE.md, .cursorrules)
   //     Generated from the already-rendered AGENTS.md content + optional header.
+  //     Supports multiple tools: --agent-tool all or --agent-tool claude-code,cursor
   //     No separate templates needed — AGENTS.md is the canonical source.
-  if (agentTool) {
-    const toolEntry = getToolEntry(agentTool);
-    if (toolEntry && toolEntry.file) {
-      const agentsMdPath = join(targetDir, 'AGENTS.md');
-      if (existsSync(agentsMdPath)) {
+  if (agentTools.length > 0) {
+    const agentsMdPath = join(targetDir, 'AGENTS.md');
+    let agentsContent = '';
+    if (existsSync(agentsMdPath)) {
+      agentsContent = readFileSync(agentsMdPath, 'utf-8');
+    }
+
+    for (const tool of agentTools) {
+      const toolEntry = getToolEntry(tool);
+      if (toolEntry && toolEntry.file && agentsContent) {
         try {
-          const agentsContent = readFileSync(agentsMdPath, 'utf-8');
           const header = toolEntry.header || '';
           const outPath = join(targetDir, toolEntry.file);
           // Ensure subdirectory exists (e.g. .github/copilot-instructions.md)
@@ -304,12 +331,14 @@ export default async function initCommand(args) {
       }
     }
 
-    // Set agentTool in the generated harness/config.json
+    // Set agentTool in the generated harness/config.json (primary tool)
     const configPath = join(targetDir, 'harness', 'config.json');
     if (existsSync(configPath)) {
       try {
         const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
         cfg.agentTool = agentTool;
+        // Store all configured tools for reference
+        cfg.agentTools = agentTools;
         writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
       } catch (err) {
         errors.push(`harness/config.json agentTool: ${err.message}`);
@@ -327,6 +356,49 @@ export default async function initCommand(args) {
         writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
       } catch (err) {
         errors.push(`harness/config.json mode: ${err.message}`);
+      }
+    }
+  }
+
+  // 5d. Apply --no-gates override to the generated harness/config.json (G12)
+  // Gates are ON by default; --no-gates flips them off for permissive opt-out.
+  if (noGates) {
+    const configPath = join(targetDir, 'harness', 'config.json');
+    if (existsSync(configPath)) {
+      try {
+        const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
+        cfg.gates = cfg.gates || {};
+        cfg.gates.enabled = false;
+        writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
+      } catch (err) {
+        errors.push(`harness/config.json gates: ${err.message}`);
+      }
+    }
+  }
+
+  // 5e. Apply retry cascade defaults for autopilot mode (G10).
+  // Autopilot = autonomous path → full 3-level cascade on by default
+  // (task 3× → feature 2× → phase 2× = 12 attempts before human).
+  // Copilot keeps current behavior (human in loop, feature/phase retry off).
+  if (mode === 'autopilot') {
+    const configPath = join(targetDir, 'harness', 'config.json');
+    if (existsSync(configPath)) {
+      try {
+        const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
+        cfg.retry = cfg.retry || {};
+        cfg.retry.tasks = cfg.retry.tasks || {};
+        cfg.retry.features = cfg.retry.features || {};
+        cfg.retry.phases = cfg.retry.phases || {};
+        // Cascade on by default in autopilot
+        cfg.retry.features.enabled = true;
+        cfg.retry.phases.enabled = true;
+        // Lower task default to 3 when cascade active (3×2×2 = 12 total, not 40)
+        if (cfg.retry.tasks.maxRetries === null || cfg.retry.tasks.maxRetries === undefined || cfg.retry.tasks.maxRetries === 10) {
+          cfg.retry.tasks.maxRetries = 3;
+        }
+        writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
+      } catch (err) {
+        errors.push(`harness/config.json retry cascade: ${err.message}`);
       }
     }
   }

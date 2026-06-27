@@ -8,7 +8,7 @@ harness conventions file that any coding agent can read.
 
 ```bash
 # Scaffold with generic adapter (default — no flag needed)
-harness-dev init --stack node --target my-project
+dev-harness init --stack node --target my-project
 cd my-project
 ```
 
@@ -22,7 +22,7 @@ cd my-project
 
 Any agent tool that reads `AGENTS.md` from the project root will pick up the
 harness conventions automatically. The agent follows the phase instructions
-emitted by `harness-dev phase <name>` and runs `harness-dev validate` after
+emitted by `dev-harness phase <name>` and runs `dev-harness validate` after
 each phase.
 
 ## Supported Tools (no adapter needed)

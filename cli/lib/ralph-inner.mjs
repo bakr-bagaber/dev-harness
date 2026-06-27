@@ -19,8 +19,45 @@ import { validateAgainstSchema } from './validate-schema.mjs';
 import { gitHardResetClean } from './git.mjs';
 import { phaseLabel } from './command-helpers.mjs';
 import { FEATURE_LIST_SCHEMA_PATH, FEATURE_LIST_PATH } from './paths.mjs';
-import { buildFeatureIterateOutput, buildDeliverableRetryOutput } from './ralph-output.mjs';
 import { DEFAULT_MAX_RETRIES } from './constants.mjs';
+
+// ── Output builders (inlined from ralph-output.mjs, which was removed) ───────
+
+function buildFeatureIterateOutput(phase, feature, task, mode, maxRetries, resetOnRetry, autoCommit) {
+  const label = phaseLabel(phase);
+  let extra = '';
+  if (phase === 'simplify') {
+    extra = `\n\nSimplifier focus:\n` +
+      `- Remove code smells, deep nesting, DRY violations, dead code\n` +
+      `- Consolidate duplicate logic\n` +
+      `- Simplify complex conditionals\n` +
+      `- Ensure tests still pass after simplification\n` +
+      `- Delete more than you add`;
+  }
+  return `═══ ${phase.toUpperCase()} PHASE ═══\n` +
+    `Mode: feature-iterate\n\n` +
+    `${label} — Feature: ${feature.name} — Task: ${task.description}\n` +
+    `Current feature: ${feature.name}\n` +
+    `Current task: ${task.description}\n\n` +
+    `Planner: scope of this task\n` +
+    `Generator: implement/test/simplify\n` +
+    `Evaluator: verify against acceptance criteria\n` +
+    `Run: dev-harness validate --feature ${feature.id} --task ${task.id}\n` +
+    `Retry: ${maxRetries} max, reset on success${resetOnRetry ? ', git reset on retry' : ''}${autoCommit ? ', auto-commit' : ''}` +
+    extra;
+}
+
+function buildDeliverableRetryOutput(phase, mode, maxRetries, resetOnRetry, autoCommit) {
+  const label = phaseLabel(phase);
+  return `═══ ${phase.toUpperCase()} PHASE ═══\n` +
+    `Mode: deliverable-retry\n\n` +
+    `${label}: produce the deliverable\n\n` +
+    `Planner: define scope of this deliverable\n` +
+    `Generator: produce it\n` +
+    `Evaluator: verify against phase criteria\n` +
+    `Run: dev-harness validate\n` +
+    `Retry: ${maxRetries} max${resetOnRetry ? ', git reset on retry' : ''}${autoCommit ? ', auto-commit' : ''}`;
+}
 
 // ── Phase type classification ────────────────────────────────────────────────
 

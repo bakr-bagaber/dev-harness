@@ -1,38 +1,42 @@
 # VERIFY Phase
 
-**Loop mode:** Feature-iterate
-**Unit of work:** One feature re-checked by an independent agent
-**Primary agent:** Evaluator
+## Overview
+Independently verify that built features meet acceptance criteria. The Evaluator
+role runs tests, checks coverage, and validates behavior against the PRD.
 
-## Purpose
+## When to Use
+- BUILD phase complete (all features pass)
+- Need to verify quality before review
 
-No agent evaluates its own work. The Evaluator independently re-runs each
-feature's acceptance criteria from the sprint contract and scores it against
-`evaluator-rubric.md`. Failures go back to BUILD with feedback.
+## Process
+1. Read `harness/progress.md`, `AGENTS.md`, and `specs/prd.md`
+2. Run `dev-harness status` to see current state
+3. For each feature:
+   a. Run the test suite: `{{testCmd}}`
+   b. Check coverage: `{{coverageCmd}}` (if coverage gate enabled)
+   c. Verify behavior matches acceptance criteria from PRD
+   d. Run `dev-harness validate --feature <id> --task <id>` per task
+4. If any task fails → fix and re-validate (retry)
+5. When all features verified → run `dev-harness validate` (full phase)
+6. If PASS → `dev-harness phase next` to advance to SIMPLIFY or REVIEW
 
-## Entry
+## Rationalizations to Avoid
+| Excuse | Rebuttal |
+|--------|----------|
+| "Build already validated, no need to re-verify" | Build validates implementation; VERIFY validates behavior |
+| "Coverage is high enough" | Check against configured threshold, not gut feeling |
+| "Edge cases are unlikely" | Unlikely ≠ impossible — test them |
 
-- BUILD gate passed
-- All features marked `passes: true` by Generator
+## Red Flags
+- Tests pass but behavior doesn't match PRD acceptance criteria
+- Coverage below configured threshold
+- Missing tests for error/edge cases
 
-## Work
-
-1. Read `sprint-contract.md` criteria and `evaluator-rubric.md`.
-2. For each feature: re-run its verification command independently.
-3. Score each rubric dimension (0–2): Correctness, Coverage, Code Quality,
-   Security, Performance, Handoff Readiness.
-4. On pass: keep `passes: true`, record score in `progress.md`.
-5. On fail: mark `passes: false`, write feedback, return to BUILD.
-
-## Exit Gate
-
-Run `dev-harness validate` — checks:
-
-- `config-exists`
-- `git-repo`
-- `git-clean`
-- All features re-confirmed `passes: true` by Evaluator
+## Verification
+- [ ] All tests pass: `{{testCmd}}`
+- [ ] Coverage meets threshold (if gate enabled)
+- [ ] Behavior matches PRD acceptance criteria
+- [ ] `dev-harness validate` passes
 
 ## Handoff
-
-On gate pass: `dev-harness phase simplify` (Evaluator → Simplifier).
+On gate pass: `dev-harness phase next` (Evaluator → Simplifier for SIMPLIFY, or Evaluator for REVIEW)

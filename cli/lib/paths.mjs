@@ -152,3 +152,13 @@ export function DECISIONS_PATH(targetDir) {
 export function AGENTS_PATH(targetDir) {
   return resolve(targetDir, 'AGENTS.md');
 }
+
+/**
+ * Path to a project's agent role docs directory (harness/docs/agents/).
+ * Contains planner.md, generator.md, evaluator.md, simplifier.md.
+ * @param {string} targetDir
+ * @returns {string}
+ */
+export function AGENTS_DOCS_DIR(targetDir) {
+  return resolve(HARNESS_DIR(targetDir), 'docs', 'agents');
+}

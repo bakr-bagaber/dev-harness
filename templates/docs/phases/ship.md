@@ -1,43 +1,43 @@
 # SHIP Phase
 
-**Loop mode:** Deliverable-retry
-**Deliverable:** Release artifact (tag, changelog entry, PR)
-**Primary agent:** Generator (release mechanics), Evaluator (final sign-off)
+## Overview
+Prepare and execute the release. Tag the version, finalize changelog, verify
+clean working tree, and ensure all ship gates pass.
 
-## Purpose
+## When to Use
+- REVIEW phase complete
+- Ready to release
 
-Produce the release. Cut a tag, update `CHANGELOG.md`, open or merge the PR.
-The release must be reproducible from a clean checkout.
+## Process
+1. Read `harness/progress.md` and `AGENTS.md`
+2. Run `dev-harness status` to see current state
+3. Finalize `CHANGELOG.md` with version, date, and changes
+4. Verify working tree is clean: `git status`
+5. Create version tag: `git tag v<version>`
+6. Ensure LICENSE, CONTRIBUTING.md exist
+7. Run `dev-harness validate` to check ship gates
+8. If PASS → `dev-harness phase next` (pipeline complete!)
+9. Create checkpoint: `dev-harness checkpoint create release-<version>`
 
-## Entry
+## Rationalizations to Avoid
+| Excuse | Rebuttal |
+|--------|----------|
+| "I'll tag after deploying" | Tag before deploying — you want a known-good rollback point |
+| "CHANGELOG can wait" | Users need to know what changed — write it now |
+| "Working tree has minor changes" | Ship from clean tree only — commit or stash first |
 
-- REVIEW gate passed with verdict `Accept`
+## Red Flags
+- Uncommitted changes in working tree
+- No version tag created
+- CHANGELOG.md missing or empty
+- LICENSE or CONTRIBUTING.md missing
 
-## Work
-
-1. Update `CHANGELOG.md` with version, date, summary.
-2. Bump version in `package.json` / equivalent manifest.
-3. Run full `dev-harness validate` — all gates must pass.
-4. Tag the release: `git tag -a v<x.y.z> -m "Release x.y.z"`.
-5. Open or merge the PR per project workflow.
-
-## Exit Gate
-
-Run `dev-harness validate` — checks:
-
-- `config-exists`
-- `git-repo`
-- `git-clean`
-- Release tag exists
-- `CHANGELOG.md` updated
-- `readme-exists` — README.md present with meaningful content
-- `license-exists` — LICENSE file present
-- `changelog-content` — CHANGELOG.md has actual version entries
-- `contributing-exists` — CONTRIBUTING.md present (recommended)
-- `no-empty-dirs` — no empty directories in shipped project
+## Verification
+- [ ] Working tree clean: `git status` shows no changes
+- [ ] Version tag created: `git tag -l "v*"`
+- [ ] CHANGELOG.md updated with version + changes
+- [ ] README.md, LICENSE, CONTRIBUTING.md exist
+- [ ] `dev-harness validate` passes
 
 ## Handoff
-
-On gate pass: pipeline complete. `dev-harness status` reports
-`Pipeline complete after "ship"`. Increment `pipelineIteration` and loop back
-to DEFINE for the next sprint, or stop if the project is done.
+On gate pass: Pipeline complete! `dev-harness status` shows "Pipeline complete".

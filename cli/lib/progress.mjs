@@ -12,7 +12,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { PROGRESS_PATH } from './paths.mjs';
+import { PROGRESS_PATH, HANDOFF_PATH } from './paths.mjs';
 import { loadConfig } from './state.mjs';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -354,4 +354,296 @@ export function readSessionState(targetDir) {
 export function readLessons(targetDir) {
   const { lessons } = readProgress(targetDir);
   return lessons;
+}
+
+// ── Session handoff (G13/G14 — three-file split) ─────────────────────────────
+//
+// The handoff file (harness/session-handoff.md) is the "clock-out snapshot" —
+// overwritten at every session boundary (7 triggers) with the current state.
+// A new session reads it first (clock-in) to pick up where the last left off.
+//
+// Lifecycle: OVERWRITE (not append). Distinct from progress.md (append-only
+// history log) and lessons-decisions.md (append-only lesson→decision pairs).
+
+/**
+ * Build a handoff snapshot from the current config + state.
+ * @param {string} targetDir
+ * @returns {{ fields: Record<string,string>, timestamp: string }}
+ */
+function buildHandoffSnapshot(targetDir) {
+  const { config, ok } = loadConfig(targetDir);
+  if (!ok) {
+    return {
+      fields: {
+        'Current Phase': 'unknown',
+        'Current Role': '—',
+        'Current Feature': '—',
+        'Gate Status': 'unknown',
+        'Next Action': 'Run: dev-harness init',
+        'Retry Count': '0',
+        'Last Commit': '—',
+      },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  const phase = config.currentPhase || 'not started';
+  const role = config.currentRole || '—';
+  const taskRetry = config.taskRetryCount ?? 0;
+  const featureRetry = config.featureRetryCount ?? 0;
+  const phaseRetry = config.phaseRetryCount ?? 0;
+  const lastCommit = config.git?.lastCommitMessage || '—';
+  const paused = config.paused ? ' (PAUSED)' : '';
+
+  // Determine gate status
+  let gateStatus = 'disabled';
+  if (config.gates?.enabled) {
+    gateStatus = config.gateHistory?.length > 0
+      ? (config.gateHistory[config.gateHistory.length - 1].result === 'pass' ? 'pass' : 'fail')
+      : 'pending';
+  }
+
+  // Determine next action based on phase + state
+  let nextAction;
+  if (!config.currentPhase) {
+    nextAction = 'Run: dev-harness phase define';
+  } else if (config.paused) {
+    nextAction = 'Paused — run: dev-harness resume';
+  } else if (config.currentPhase === 'ship') {
+    nextAction = 'Run: dev-harness validate (ship gate) → phase next (complete)';
+  } else {
+    nextAction = `Run: dev-harness validate (${phase} gate) → phase next`;
+  }
+
+  return {
+    fields: {
+      'Current Phase': `${phase}${paused}`,
+      'Current Role': role,
+      'Current Feature': config.currentFeature || '—',
+      'Gate Status': gateStatus,
+      'Next Action': nextAction,
+      'Retry Count': `task:${taskRetry} feature:${featureRetry} phase:${phaseRetry}`,
+      'Last Commit': lastCommit,
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Write the session handoff file (overwrite). Called at every session boundary.
+ * G13/G14: repurposes the old writeSessionState to write session-handoff.md.
+ * @param {string} targetDir
+ * @param {Record<string,string>} [overrides] — optional field overrides
+ * @returns {{ ok: boolean, error: string|null }}
+ */
+export function writeHandoff(targetDir, overrides) {
+  const handoffPath = HANDOFF_PATH(targetDir);
+  const { fields, timestamp } = buildHandoffSnapshot(targetDir);
+  const merged = { ...fields, ...(overrides || {}) };
+
+  const lines = [
+    '# Session Handoff',
+    '',
+    `> Last updated: ${timestamp}`,
+    '',
+    '## Current State',
+    '',
+    ...Object.entries(merged).map(([k, v]) => `- **${k}:** ${v}`),
+    '',
+    '## Context',
+    '',
+    '<!-- What are we building? What phase are we in? -->',
+    '',
+    '## Open Questions',
+    '',
+    '- ...',
+    '',
+    `## Related Files`,
+    '',
+    `- History log: \`harness/progress.md\``,
+    `- Lessons + decisions: \`harness/lessons-decisions.md\``,
+    `- Phase skill: \`harness/docs/phases/${merged['Current Phase'] || 'define'}.md\``,
+    '',
+  ];
+
+  try {
+    mkdirSync(dirname(handoffPath), { recursive: true });
+    writeFileSync(handoffPath, lines.join('\n') + '\n', 'utf-8');
+    return { ok: true, error: null };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * Read the session handoff file. Returns null if not found.
+ * @param {string} targetDir
+ * @returns {{ fields: Record<string,string>, timestamp: string|null, ok: boolean }|null}
+ */
+export function readHandoff(targetDir) {
+  const handoffPath = HANDOFF_PATH(targetDir);
+  if (!existsSync(handoffPath)) {
+    return null;
+  }
+
+  let content;
+  try {
+    content = readFileSync(handoffPath, 'utf-8');
+  } catch {
+    return null;
+  }
+
+  // Parse timestamp
+  const tsMatch = content.match(/Last updated:\s*(.+)/);
+  const timestamp = tsMatch ? tsMatch[1].trim() : null;
+
+  // Parse fields (lines like "- **Key:** value")
+  const fields = {};
+  const fieldRe = /^-\s+\*\*([^:]+):\*\*\s*(.*)$/;
+  for (const line of content.split('\n')) {
+    const m = line.match(fieldRe);
+    if (m) {
+      fields[m[1].trim()] = m[2].trim();
+    }
+  }
+
+  return { fields, timestamp, ok: true };
+}
+
+/**
+ * Append a history entry to progress.md (append-only log).
+ * G13: progress.md is now append-only (no more overwrite Session State section).
+ * @param {string} targetDir
+ * @param {string} action — what happened (e.g. "phase transition: define → plan")
+ * @returns {{ ok: boolean, error: string|null }}
+ */
+export function appendProgress(targetDir, action) {
+  const progPath = getProgressPath(targetDir);
+  const timestamp = new Date().toISOString();
+  const entry = `${timestamp} | ${action}`;
+
+  let content = '';
+  if (existsSync(progPath)) {
+    try {
+      content = readFileSync(progPath, 'utf-8');
+    } catch {
+      content = '';
+    }
+  }
+
+  // Ensure there's a ## History section
+  if (!content.includes('## History')) {
+    content = content.replace(/\n*$/, '') + '\n\n## History\n\n' + entry + '\n';
+  } else {
+    // Append to existing History section
+    content = content.replace(/(## History[\s\S]*?)$/, `$1${entry}\n`);
+  }
+
+  try {
+    mkdirSync(dirname(progPath), { recursive: true });
+    writeFileSync(progPath, content.replace(/\n*$/, '\n'), 'utf-8');
+    return { ok: true, error: null };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * Read the last N history entries from progress.md.
+ * @param {string} targetDir
+ * @param {number} [n=5]
+ * @returns {Array<{timestamp:string,action:string}>}
+ */
+export function readProgressTail(targetDir, n = 5) {
+  const { ok, lessons } = readProgress(targetDir);
+  if (!ok) { return []; }
+  // For now, lessons serve as the history tail (same format: date|author|text)
+  return lessons.slice(-n);
+}
+
+// ── Decisions log (G18 — lessons-decisions.md) ──────────────────────────────
+
+/**
+ * Path to lessons-decisions.md (lives alongside progress.md).
+ * @param {string} targetDir
+ * @returns {string}
+ */
+export function getLessonsDecisionsPath(targetDir) {
+  return PROGRESS_PATH(targetDir).replace('progress.md', 'lessons-decisions.md');
+}
+
+/**
+ * Append a decision entry to lessons-decisions.md, linked to the last lesson.
+ * G18: decisions are recorded live (not backfilled at REVIEW), paired with lessons.
+ * @param {string} targetDir
+ * @param {string} text — decision text
+ * @param {string} [linkedLesson] — optional: the lesson this decision addresses
+ * @returns {{ ok: boolean, error: string|null }}
+ */
+export function appendDecision(targetDir, text, linkedLesson) {
+  const ldPath = getLessonsDecisionsPath(targetDir);
+  const timestamp = new Date().toISOString();
+  const date = fmtDate();
+
+  let content = '';
+  if (existsSync(ldPath)) {
+    try {
+      content = readFileSync(ldPath, 'utf-8');
+    } catch {
+      // keep content as ''
+    }
+  } else {
+    content = '# Lessons & Decisions\n\n> Append-only log. Each lesson is paired with its decision.\n\n';
+  }
+
+  const entry = [
+    `### ${date}`,
+    '',
+    `**Decision:** ${text}`,
+    linkedLesson ? `**Addresses lesson:** ${linkedLesson}` : '',
+    `**Recorded:** ${timestamp}`,
+    '',
+  ].filter(l => l !== '').join('\n');
+
+  content = content.replace(/\n*$/, '') + '\n\n' + entry + '\n';
+
+  try {
+    mkdirSync(dirname(ldPath), { recursive: true });
+    writeFileSync(ldPath, content + '\n', 'utf-8');
+    return { ok: true, error: null };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * Read the last N decision entries from lessons-decisions.md.
+ * @param {string} targetDir
+ * @param {number} [n=3]
+ * @returns {Array<{date:string,text:string}>}
+ */
+export function readDecisionsTail(targetDir, n = 3) {
+  const ldPath = getLessonsDecisionsPath(targetDir);
+  if (!existsSync(ldPath)) { return []; }
+
+  let content;
+  try {
+    content = readFileSync(ldPath, 'utf-8');
+  } catch {
+    return [];
+  }
+
+  // Parse ### date entries
+  const decisions = [];
+  const sections = content.split(/^### /m).slice(1);
+  for (const section of sections) {
+    const lines = section.split('\n');
+    const date = lines[0]?.trim() || '';
+    const textMatch = lines.find(l => l.startsWith('**Decision:**'));
+    const text = textMatch ? textMatch.replace(/^\*\*Decision:\*\*\s*/, '').trim() : '';
+    if (date && text) {
+      decisions.push({ date, text });
+    }
+  }
+  return decisions.slice(-n);
 }

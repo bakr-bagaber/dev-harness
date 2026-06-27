@@ -1,42 +1,41 @@
 # REVIEW Phase
 
-**Loop mode:** Deliverable-retry
-**Deliverable:** Review report (`review-report.md`)
-**Primary agents:** Multi-agent committee (Planner, Generator, Evaluator, Simplifier)
+## Overview
+Final quality gate before shipping. The Evaluator reviews the complete codebase
+against the evaluator rubric, checks documentation, and ensures the branch is
+up-to-date with upstream.
 
-## Purpose
+## When to Use
+- BUILD/VERIFY/SIMPLIFY phases complete
+- Ready for final quality review before release
 
-Whole-project review by the committee. Each persona reviews from its angle and
-records findings. The Evaluator aggregates into `review-report.md` with an
-overall verdict: Accept / Revise / Block.
+## Process
+1. Read `harness/progress.md`, `AGENTS.md`, and `harness/evaluator-rubric.md`
+2. Run `dev-harness status` to see current state
+3. Review codebase against evaluator rubric (6 dimensions, 0-2 each):
+   - Architecture, test coverage, code quality, documentation, performance, security
+4. Check documentation: README.md, CHANGELOG.md, architecture docs
+5. Ensure branch is up-to-date: `git push` if needed
+6. Run `dev-harness validate` to check gates
+7. If PASS → `dev-harness phase next` to advance to SHIP
 
-## Entry
+## Rationalizations to Avoid
+| Excuse | Rebuttal |
+|--------|----------|
+| "Build and verify already checked quality" | Review is holistic — catches cross-cutting issues |
+| "Documentation can be added post-ship" | Docs shipped late are docs shipped never |
+| "The rubric is too strict" | The rubric encodes minimum quality — meet it |
 
-- SIMPLIFY gate passed (or SIMPLIFY disabled)
+## Red Flags
+- Rubric score below 8/12 — quality is marginal
+- Missing README, CHANGELOG, or architecture docs
+- Branch behind upstream — merge before shipping
 
-## Work
-
-1. Each persona reviews the full diff since last review:
-   - Planner: scope adherence vs `sprint-contract.md`
-   - Generator: implementation correctness
-   - Evaluator: rubric scores, gate evidence
-   - Simplifier: residual complexity / dead code
-2. Evaluator aggregates findings into `review-report.md`.
-3. Verdict `Revise` → return to BUILD with specific feedback.
-4. Verdict `Accept` → proceed to SHIP.
-
-## Exit Gate
-
-Run `dev-harness validate` — checks:
-
-- `config-exists`
-- `git-repo`
-- `git-clean`
-- `review-report.md` present with verdict `Accept`
-- `readme-exists` — README.md present with meaningful content
-- `architecture-doc` — ARCHITECTURE.md filled in (if file exists)
-- `decisions-logged` — DECISIONS.md has at least one recorded decision
+## Verification
+- [ ] Evaluator rubric score >= 8/12
+- [ ] README.md, CHANGELOG.md exist and are current
+- [ ] Branch up-to-date with upstream
+- [ ] `dev-harness validate` passes
 
 ## Handoff
-
-On gate pass: `dev-harness phase ship` (committee → release).
+On gate pass: `dev-harness phase next` (Evaluator → Generator for SHIP)

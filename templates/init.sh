@@ -59,8 +59,11 @@ if [ ! -f "harness-config.json" ]; then
 {
   "version": "1.0",
   "stack": "{{stack}}",
+  "stackMeta": null,
+  "agentTool": null,
   "mode": "copilot",
   "currentPhase": null,
+  "currentRole": null,
   "paused": false,
   "features": {
     "remaining": 0,
@@ -68,8 +71,25 @@ if [ ! -f "harness-config.json" ]; then
     "total": 0
   },
   "gates": {
-    "enabled": false,
-    "checks": ["all"]
+    "enabled": true,
+    "checks": ["all"],
+    "coverage": {
+      "enabled": false,
+      "threshold": 80
+    },
+    "cleanState": {
+      "enabled": false,
+      "stalePatterns": [],
+      "startupCmd": null
+    },
+    "antiPlaceholder": {
+      "enabled": true,
+      "patterns": []
+    }
+  },
+  "cleanup": {
+    "schedule": "0 2 * * 0",
+    "autoFix": false
   },
   "git": {
     "autoCommit": false,
@@ -92,7 +112,16 @@ if [ ! -f "harness-config.json" ]; then
     }
   },
   "maxRetries": 10,
+  "retry": {
+    "tasks": { "enabled": true, "maxRetries": null },
+    "features": { "enabled": false, "maxRetries": 2 },
+    "phases": { "enabled": false, "maxRetries": 2 }
+  },
+  "retryCount": 0,
   "taskRetryCount": 0,
+  "featureRetryCount": 0,
+  "phaseRetryCount": 0,
+  "pipelineIteration": 0,
   "gateHistory": [],
   "supervisor": {
     "enabled": false,

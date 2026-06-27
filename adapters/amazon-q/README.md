@@ -5,7 +5,7 @@ Amazon Q Developer reads .amazonq/rules.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool amazon-q --target my-project
+dev-harness init --stack node --agent-tool amazon-q --target my-project
 cd my-project
 ```
 

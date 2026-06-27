@@ -9,10 +9,9 @@
 import { resolve, basename } from 'node:path';
 import { detectStack } from '../lib/detect-stack.mjs';
 import { loadConfig } from '../lib/state.mjs';
-import { readLessons } from '../lib/progress.mjs';
+import { readLessons, readHandoff, readProgressTail, readDecisionsTail } from '../lib/progress.mjs';
 import { loadFeatureList, getNextFeature } from '../lib/ralph-inner.mjs';
 import { runChecks, areGatesEnabled } from '../lib/gates.mjs';
-import { renderDashboard } from '../lib/dashboard.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
 
 export default async function statusCommand(args) {
@@ -57,6 +56,11 @@ export default async function statusCommand(args) {
   const allLessons = readLessons(targetDir);
   const recentLessons = allLessons.slice(-3);
 
+  // G15: session state from handoff file + progress tail + decisions tail
+  const sessionState = readHandoff(targetDir);
+  const progressTail = readProgressTail(targetDir, 5);
+  const decisionsTail = readDecisionsTail(targetDir, 3);
+
   if (json) {
     emitJson({
       command: 'status',
@@ -69,6 +73,7 @@ export default async function statusCommand(args) {
       stackLabel: stack.label,
       mode,
       currentPhase: phase,
+      currentRole: configOk ? (config.currentRole || null) : null,
       currentFeature: currentFeature?.name || null,
       gateStatus,
       checksPassing,
@@ -86,6 +91,11 @@ export default async function statusCommand(args) {
         pipelineIteration: config.pipelineIteration ?? 0,
       } : null,
       recentLessons: recentLessons.map(l => ({ date: l.date, author: l.author, text: l.text })),
+      // G15: clock-in snapshot — one command = full context
+      sessionState: sessionState ? sessionState.fields : null,
+      handoffTimestamp: sessionState ? sessionState.timestamp : null,
+      progressTail: progressTail.map(p => ({ timestamp: p.date, action: p.text })),
+      decisionsTail,
       schemaErrors,
       nextAction: determineNextAction(targetDir, configOk, config, phase, gateStatus),
     });
@@ -94,7 +104,6 @@ export default async function statusCommand(args) {
 
   // ── Human-readable output ─────────────────────────────────────────────
   // Render dashboard first (phases + features + tasks with checkmarks)
-  renderDashboard(targetDir);
 
   let out = '';
   out += '═══ harness Status ═══\n';

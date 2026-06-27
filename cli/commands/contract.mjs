@@ -12,6 +12,7 @@
 import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { proposeContract, reviewContract, getContractStatus, escalateContract } from '../lib/contract.mjs';
+import { loadConfig } from '../lib/state.mjs';
 import { emitJson, emitHuman, emitCmdError } from '../lib/output.mjs';
 
 const SUBCOMMANDS = ['propose', 'review', 'status', 'escalate'];
@@ -37,6 +38,29 @@ export default async function contractCommand(args) {
       die(new CliError(
         'Usage: dev-harness contract propose --scope "I will build X" [--exclusions "W"] [--criteria "test1|test2"]',
         EXIT.USAGE_ERROR,
+      ), json);
+      return;
+    }
+
+    // G5: criteria are required (was optional). A contract without verification
+    // criteria is a contract without a definition of done — the harness can't
+    // enforce quality if the agent never specified what "done" means.
+    if (!criteria || criteria.length === 0 || criteria.every(c => !c || !c.trim())) {
+      die(new CliError(
+        'Contract propose requires --criteria. Specify at least one verification criterion.\n' +
+        '  Example: --criteria "tests pass|coverage >= 80%|lint clean"\n' +
+        '  Criteria should be deterministic and machine-verifiable where possible.',
+        EXIT.USAGE_ERROR,
+      ), json);
+      return;
+    }
+
+    // G21: contract propose requires currentRole=planner (only when role is set)
+    const { config, ok: cfgOk } = loadConfig(targetDir);
+    if (cfgOk && config.currentRole && config.currentRole !== 'planner') {
+      die(new CliError(
+        `Contract propose requires currentRole=planner (got: ${config.currentRole}). Run: dev-harness role planner`,
+        EXIT.VALIDATION_FAILURE,
       ), json);
       return;
     }
@@ -72,6 +96,16 @@ export default async function contractCommand(args) {
       die(new CliError(
         'Usage: dev-harness contract review --agreed [--notes "msg"]  OR  --needs-revision [--notes "msg"]',
         EXIT.USAGE_ERROR,
+      ), json);
+      return;
+    }
+
+    // G21: contract review requires currentRole=evaluator (only when role is set)
+    const { config: cfg, ok: cfgOkR } = loadConfig(targetDir);
+    if (cfgOkR && cfg.currentRole && cfg.currentRole !== 'evaluator') {
+      die(new CliError(
+        `Contract review requires currentRole=evaluator (got: ${cfg.currentRole}). Run: dev-harness role evaluator`,
+        EXIT.VALIDATION_FAILURE,
       ), json);
       return;
     }

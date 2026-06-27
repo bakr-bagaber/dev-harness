@@ -5,7 +5,7 @@ GitHub Copilot reads .github/copilot-instructions.md.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool copilot --target my-project
+dev-harness init --stack node --agent-tool copilot --target my-project
 cd my-project
 ```
 

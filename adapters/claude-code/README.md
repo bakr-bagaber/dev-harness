@@ -1,43 +1,43 @@
 # Claude Code Adapter
 
-Claude Code reads `AGENTS.md` from the project root automatically. When you
-scaffold with `harness-dev init --agent-tool claude-code`, the harness generates
-a `CLAUDE.md` that points Claude at the harness conventions.
+Claude Code reads `CLAUDE.md` from the project root automatically. When you
+scaffold with `dev-harness init --agent-tool claude-code`, the harness generates
+a `CLAUDE.md` with the full workflow driver content (same as AGENTS.md).
 
 ## Usage
 
 ```bash
 # Scaffold with Claude Code adapter
-harness-dev init --stack node --agent-tool claude-code --target my-project
+dev-harness init --stack node --agent-tool claude-code --target my-project
 cd my-project
 
-# Claude Code picks up CLAUDE.md automatically
+# CLAUDE.md is in the project root — Claude reads it automatically
 claude
+
+# Inside Claude: follow the workflow from CLAUDE.md
+# - dev-harness status → check current phase
+# - Read harness/docs/phases/<phase>.md → phase skill
+# - Do the work
+# - dev-harness validate → check gates
+# - dev-harness phase next → advance
 ```
 
 ## Files Generated
 
-- `CLAUDE.md` — Claude-specific entry point (references AGENTS.md)
-- `AGENTS.md` — canonical harness conventions (always generated)
-- `harness-config.json` — with `agentTool: "claude-code"`
-
-## Files in Adapter Directory
-
-- `spawn.mjs` — **Tier-1 spawn adapter** for orchestrator mode (`dev-harness run`).
-  Spawns Claude Code per task with `claude -p --dangerously-skip-permissions <prompt>`
-  for non-interactive execution with session isolation.
+- `CLAUDE.md` — Claude-specific instruction file (generated from AGENTS.md content)
+- `AGENTS.md` — canonical workflow driver (always generated)
+- `harness/config.json` — with `agentTool: "claude-code"`
 
 ## How It Works
 
-### Manual Mode (Tier 2)
-Claude Code reads `CLAUDE.md` on startup. The generated `CLAUDE.md` includes
-the harness quick-start, phase pipeline, and commands — same content as
-`AGENTS.md` but in the file Claude looks for. Claude then follows the phase
-instructions emitted by `harness-dev phase <name>` and runs
-`harness-dev validate` after each phase.
+Claude Code reads `CLAUDE.md` on startup. The generated `CLAUDE.md` contains
+the full workflow driver: phase pipeline, phase→skill mapping, rules, commands.
+Claude follows the workflow by calling dev-harness CLI commands:
 
-### Orchestrator Mode (Tier 1)
-Use `dev-harness run --agent-tool claude-code` to start the orchestrator. The
-supervisor spawns Claude Code per task via `spawn.mjs` in non-interactive print
-mode, monitors for completion, handles API downtime with exponential backoff,
-and auto-advances through the pipeline with a live dashboard.
+1. `dev-harness status` → learns current phase
+2. Reads `harness/docs/phases/<phase>.md` → phase skill instructions
+3. Does the work (writes code, specs, tests)
+4. `dev-harness validate` → gates check quality
+5. `dev-harness phase next` → advance to next phase
+
+Dev Harness enforces gates, phase order, and state via the CLI backend.

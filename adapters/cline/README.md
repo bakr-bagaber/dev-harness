@@ -5,7 +5,7 @@ Cline (VS Code extension) reads .clinerules.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool cline --target my-project
+dev-harness init --stack node --agent-tool cline --target my-project
 cd my-project
 ```
 

@@ -5,7 +5,7 @@ Pi — assumed to read AGENTS.md.
 ## Usage
 
 ```bash
-harness-dev init --stack node --agent-tool pi --target my-project
+dev-harness init --stack node --agent-tool pi --target my-project
 cd my-project
 ```
 

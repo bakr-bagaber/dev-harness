@@ -249,6 +249,8 @@ export function getExtraFiles(stack) {
               id: { type: 'string' },
               name: { type: 'string' },
               passes: { type: 'boolean' },
+              definitionOfDone: { type: 'array', items: { type: 'string' }, default: [] },
+              producedByRole: { type: ['string', 'null'], enum: [null, 'planner', 'generator', 'evaluator', 'simplifier'], default: null },
               tasks: {
                 type: 'array',
                 items: {
@@ -258,6 +260,8 @@ export function getExtraFiles(stack) {
                     id: { type: 'string' },
                     description: { type: 'string' },
                     status: { type: 'string', enum: ['pending', 'in_progress', 'complete', 'blocked'] },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string' }, default: [] },
+                    producedByRole: { type: ['string', 'null'], enum: [null, 'planner', 'generator', 'evaluator', 'simplifier'], default: null },
                   },
                 },
               },
@@ -422,6 +426,8 @@ export function getGitignoreContent(stack) {
 harness/config.json
 harness/features/feature-list.json
 harness/progress.md
+harness/session-handoff.md
+harness/lessons-decisions.md
 
 ${GITIGNORE_PATTERNS[stack] || GITIGNORE_PATTERNS.generic}
 # OS
