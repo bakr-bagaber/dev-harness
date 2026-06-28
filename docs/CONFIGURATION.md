@@ -181,8 +181,8 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 |-----|------|-------------|
 | `currentPhase` | string | Current pipeline phase |
 | `currentRole` | string\|null | Current agent role (planner/generator/evaluator/simplifier/null). Set via `dev-harness role` (G19) |
-| `currentFeature` | string\|null | Currently active feature ID (tracked by state machine, set by ralph-tasks) |
-| `currentTask` | string\|null | Currently active task ID (tracked by state machine, set by ralph-tasks) |
+| `currentFeature` | string\|null | Currently active feature ID (tracked by state machine, set by ralph-features loop) |
+| `currentTask` | string\|null | Currently active task ID (tracked by state machine, set by ralph-tasks loop) |
 | `retryCount` | integer | (Legacy) phase-level retry count — superseded by `phaseRetryCount` for the new 3-level model; kept for backward compat / deliverable-retry phases. |
 | `taskRetryCount` | integer | Per-task retry count (reset on task success) |
 | `featureRetryCount` | integer | Per-feature retry count (reset when feature passes) — v3.1.0+ |

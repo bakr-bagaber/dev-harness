@@ -1,6 +1,6 @@
 ---
 name: "dev-harness"
-description: "Dev Harness — phase-based development pipeline with stack detection, template scaffolding, state machine, gate validation, inner/phase loop, copilot/autopilot modes, sprint contracts, git worktree management, rollback/checkpoint, multi-agent role framework, session-boundary enforcement, 3-level retry cascade, cleanup/audit, Skill adapter, distribution packaging, docs-site scaffolding, coverage gates, cross-platform support, CI/CD templates, and consolidated test runner. Covers T1-T25 + G1-G24 gap implementations. Load when any task involves dev-harness CLI usage, working inside a harness-scaffolded project, or debugging harness issues."
+description: "Dev Harness — phase-based development pipeline with stack detection, template scaffolding, state machine, gate validation, 3-level Ralph loops (task/feature/phase), copilot/autopilot modes, sprint contracts, git worktree management, rollback/checkpoint, multi-agent role framework, session-boundary enforcement, 3-level retry cascade, cleanup/audit, Skill adapter, distribution packaging, docs-site scaffolding, coverage gates, cross-platform support, CI/CD templates, and consolidated test runner. Covers T1-T25 + G1-G24 gap implementations. Load when any task involves dev-harness CLI usage, working inside a harness-scaffolded project, or debugging harness issues."
 license: MIT
 category: software-development
 risk: high
@@ -29,7 +29,7 @@ metadata:
 
 A CLI tool (`cli/dev-harness.mjs`) that provides a **phase-based development pipeline** for AI agent workflows. The harness is backend-only (v4.0.0+): no TUI, no orchestrator, no agent spawning. Your coding agent is the frontend — they read `AGENTS.md` + phase skills, then call CLI commands to drive the pipeline.
 
-Projects are scaffolded with stack-aware templates, tracked by a state machine, validated by gates, and iterated via inner/phase loops. The multi-agent role framework (planner/generator/evaluator/simplifier) enforces role separation with self-evaluation guards.
+Projects are scaffolded with stack-aware templates, tracked by a state machine, validated by gates, and iterated via 3-level Ralph loops (task → feature → phase). The multi-agent role framework (planner/generator/evaluator/simplifier) enforces role separation with self-evaluation guards.
 
 ## Quick Start
 

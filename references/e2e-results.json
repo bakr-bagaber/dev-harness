@@ -1,0 +1,1807 @@
+{
+  "suites": [
+    {
+      "suite": "B-init",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "B1 init status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "B1 has message"
+        },
+        {
+          "pass": true,
+          "msg": "B1 AGENTS.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 harness/config.json exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 feature-list.json exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 progress.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 sprint-contract.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 init.sh exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 evaluator-rubric.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase define.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase plan.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase build.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase verify.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase simplify.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase review.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 phase ship.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 agent planner.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 agent generator.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 agent evaluator.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 agent simplifier.md exists"
+        },
+        {
+          "pass": true,
+          "msg": "B1 init.sh is executable"
+        },
+        {
+          "pass": true,
+          "msg": "B1 git initial commit"
+        },
+        {
+          "pass": true,
+          "msg": "B1 default mode copilot"
+        },
+        {
+          "pass": true,
+          "msg": "B1 currentPhase null"
+        },
+        {
+          "pass": true,
+          "msg": "B1 gates enabled default (G12: enforcement by default)"
+        },
+        {
+          "pass": true,
+          "msg": "B1 maxRetries 10 (DEFAULT_MAX_RETRIES)"
+        },
+        {
+          "pass": true,
+          "msg": "B1 simplify excluded default"
+        },
+        {
+          "pass": true,
+          "msg": "B1 stack node in config"
+        },
+        {
+          "pass": true,
+          "msg": "B1 stack node in init JSON top-level"
+        },
+        {
+          "pass": true,
+          "msg": "B2 python init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B2 stack python (top-level)"
+        },
+        {
+          "pass": true,
+          "msg": "B3 go init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B3 stack go (top-level)"
+        },
+        {
+          "pass": true,
+          "msg": "B4 generic init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B4 stack generic (top-level)"
+        },
+        {
+          "pass": true,
+          "msg": "B5 existing-clean init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B5 scaffolded into existing repo"
+        },
+        {
+          "pass": true,
+          "msg": "B5 preserved existing commit"
+        },
+        {
+          "pass": true,
+          "msg": "B6 dirty repo init succeeds (dirty git not rejected)"
+        },
+        {
+          "pass": true,
+          "msg": "B6 scaffolded into dirty repo"
+        },
+        {
+          "pass": true,
+          "msg": "B7 re-init without --force exits 1 (harness files exist)"
+        },
+        {
+          "pass": true,
+          "msg": "B7 re-init rejected without --force"
+        },
+        {
+          "pass": true,
+          "msg": "B7 --force re-init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B8 --no-git init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B8 no .git dir"
+        },
+        {
+          "pass": true,
+          "msg": "B8 still scaffolds harness"
+        },
+        {
+          "pass": true,
+          "msg": "B9 agent-tool claude-code ok"
+        },
+        {
+          "pass": true,
+          "msg": "B9 CLAUDE.md generated"
+        },
+        {
+          "pass": true,
+          "msg": "B9 agentTool stored in config.json"
+        },
+        {
+          "pass": true,
+          "msg": "B10 comma agent-tools ok"
+        },
+        {
+          "pass": true,
+          "msg": "B10 CLAUDE.md generated"
+        },
+        {
+          "pass": true,
+          "msg": "B10 .cursorrules generated"
+        },
+        {
+          "pass": true,
+          "msg": "B11 agent-tool all ok"
+        },
+        {
+          "pass": true,
+          "msg": "B11 all → CLAUDE.md"
+        },
+        {
+          "pass": true,
+          "msg": "B12 invalid agent-tool exits 2 (usage)"
+        },
+        {
+          "pass": true,
+          "msg": "B13 --mode autopilot init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B13 mode autopilot stored in config.json"
+        },
+        {
+          "pass": true,
+          "msg": "B14 invalid mode exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "B15 human init ok"
+        },
+        {
+          "pass": true,
+          "msg": "B15 human output non-empty"
+        },
+        {
+          "pass": true,
+          "msg": "B15 human output not JSON"
+        },
+        {
+          "pass": true,
+          "msg": "B16 re-init without --force rejected (harness files exist)"
+        }
+      ],
+      "passed": 62,
+      "failed": 0
+    },
+    {
+      "suite": "C-copilot",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "C gates enabled"
+        },
+        {
+          "pass": true,
+          "msg": "C anti-placeholder disabled (calc CLI uses console.log)"
+        },
+        {
+          "pass": true,
+          "msg": "C stackMeta.lintCmd override persisted"
+        },
+        {
+          "pass": true,
+          "msg": "C stackMeta.testCmd override persisted"
+        },
+        {
+          "pass": true,
+          "msg": "C status before define ok"
+        },
+        {
+          "pass": true,
+          "msg": "C currentPhase null at start"
+        },
+        {
+          "pass": true,
+          "msg": "C phase define ok"
+        },
+        {
+          "pass": true,
+          "msg": "C define.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C AI wrote specs/prd.md"
+        },
+        {
+          "pass": true,
+          "msg": "C contract propose ok"
+        },
+        {
+          "pass": true,
+          "msg": "C contract review needs-revision ok"
+        },
+        {
+          "pass": true,
+          "msg": "C contract review agreed ok"
+        },
+        {
+          "pass": true,
+          "msg": "C define validate pass"
+        },
+        {
+          "pass": true,
+          "msg": "C define gate overall pass"
+        },
+        {
+          "pass": true,
+          "msg": "C learn lesson ok"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next to plan ok"
+        },
+        {
+          "pass": true,
+          "msg": "C advanced to plan (currentPhase)"
+        },
+        {
+          "pass": true,
+          "msg": "C plan.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C AI wrote feature-list.json"
+        },
+        {
+          "pass": true,
+          "msg": "C plan validate pass"
+        },
+        {
+          "pass": true,
+          "msg": "C checkpoint pre-build ok"
+        },
+        {
+          "pass": true,
+          "msg": "C manual/pre-build tag created"
+        },
+        {
+          "pass": true,
+          "msg": "C retry.tasks.enabled true"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next to build ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C build validate task-001 ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build validate task-002 ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build validate task-003 ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build validate task-004 ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build validate task-005 ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build validate task-006 ok"
+        },
+        {
+          "pass": true,
+          "msg": "C pause ok"
+        },
+        {
+          "pass": true,
+          "msg": "C paused=true persisted"
+        },
+        {
+          "pass": true,
+          "msg": "C resume ok"
+        },
+        {
+          "pass": true,
+          "msg": "C build full validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next to verify ok"
+        },
+        {
+          "pass": true,
+          "msg": "C verify.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C verify validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "C rollback list ok"
+        },
+        {
+          "pass": true,
+          "msg": "C rollback list has ≥1 checkpoint"
+        },
+        {
+          "pass": true,
+          "msg": "C simplify added to phases.enabled"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next to simplify ok"
+        },
+        {
+          "pass": true,
+          "msg": "C phase simplify ok"
+        },
+        {
+          "pass": true,
+          "msg": "C simplify.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C simplify validate fails with empty dir"
+        },
+        {
+          "pass": true,
+          "msg": "C no-empty-dirs failure reported"
+        },
+        {
+          "pass": true,
+          "msg": "C simplify validate pass after cleanup"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next to review ok"
+        },
+        {
+          "pass": true,
+          "msg": "C review.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C review validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "C contract escalate ok"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next to ship ok"
+        },
+        {
+          "pass": true,
+          "msg": "C ship.md skill accessible"
+        },
+        {
+          "pass": true,
+          "msg": "C ship validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "C phase next at ship end ok"
+        },
+        {
+          "pass": true,
+          "msg": "C currentPhase=ship at end"
+        },
+        {
+          "pass": true,
+          "msg": "C worktree create release-prep ok"
+        },
+        {
+          "pass": true,
+          "msg": "C final checkpoint v1.0 ok"
+        }
+      ],
+      "passed": 58,
+      "failed": 0
+    },
+    {
+      "suite": "D-autopilot",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "D set-mode autopilot rejected before define (exit 1)"
+        },
+        {
+          "pass": true,
+          "msg": "D set-mode copilot ok"
+        },
+        {
+          "pass": true,
+          "msg": "D gates enabled"
+        },
+        {
+          "pass": true,
+          "msg": "D set-mode autopilot ok after define"
+        },
+        {
+          "pass": true,
+          "msg": "D phase next plan→build (autopilot) ok"
+        },
+        {
+          "pass": true,
+          "msg": "D pause mid-autopilot ok"
+        },
+        {
+          "pass": true,
+          "msg": "D autopilot blocked when paused"
+        },
+        {
+          "pass": true,
+          "msg": "D resume ok"
+        },
+        {
+          "pass": true,
+          "msg": "D reached ship phase"
+        },
+        {
+          "pass": true,
+          "msg": "D ship phase next complete"
+        }
+      ],
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "suite": "E-commands",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "E status uninitialized ok (graceful)"
+        },
+        {
+          "pass": true,
+          "msg": "E status uninitialized message"
+        },
+        {
+          "pass": true,
+          "msg": "E status fresh ok"
+        },
+        {
+          "pass": true,
+          "msg": "E status fresh currentPhase null"
+        },
+        {
+          "pass": true,
+          "msg": "E status mid-pipeline currentPhase define"
+        },
+        {
+          "pass": true,
+          "msg": "E status paused=true"
+        },
+        {
+          "pass": true,
+          "msg": "E status json has command"
+        },
+        {
+          "pass": true,
+          "msg": "E validate gates disabled ok"
+        },
+        {
+          "pass": true,
+          "msg": "E validate gates disabled message"
+        },
+        {
+          "pass": true,
+          "msg": "E validate enabled returns result"
+        },
+        {
+          "pass": true,
+          "msg": "E validate --phase override"
+        },
+        {
+          "pass": true,
+          "msg": "E validate --feature parsed"
+        },
+        {
+          "pass": true,
+          "msg": "E validate no-phase exits 1"
+        },
+        {
+          "pass": true,
+          "msg": "E set-mode copilot ok"
+        },
+        {
+          "pass": true,
+          "msg": "E set-mode autopilot before define rejected"
+        },
+        {
+          "pass": true,
+          "msg": "E set-mode invalid exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "E config list ok"
+        },
+        {
+          "pass": true,
+          "msg": "E config list has params"
+        },
+        {
+          "pass": true,
+          "msg": "E config get mode ok"
+        },
+        {
+          "pass": true,
+          "msg": "E config get missing returns null"
+        },
+        {
+          "pass": true,
+          "msg": "E config set maxRetries ok"
+        },
+        {
+          "pass": true,
+          "msg": "E config set persisted"
+        },
+        {
+          "pass": true,
+          "msg": "E config set nested ok"
+        },
+        {
+          "pass": true,
+          "msg": "E config nested persisted"
+        },
+        {
+          "pass": true,
+          "msg": "E config retry.features.enabled ok"
+        },
+        {
+          "pass": true,
+          "msg": "E config retry.phases.enabled ok"
+        },
+        {
+          "pass": true,
+          "msg": "E pause ok"
+        },
+        {
+          "pass": true,
+          "msg": "E double-pause ok (idempotent)"
+        },
+        {
+          "pass": true,
+          "msg": "E resume ok"
+        },
+        {
+          "pass": true,
+          "msg": "E double-resume ok (idempotent)"
+        },
+        {
+          "pass": true,
+          "msg": "E learn ok"
+        },
+        {
+          "pass": true,
+          "msg": "E learn empty exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "E learn appended to progress.md"
+        },
+        {
+          "pass": true,
+          "msg": "E contract propose missing scope exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "E contract propose ok"
+        },
+        {
+          "pass": true,
+          "msg": "E contract review no decision exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "E contract status ok"
+        },
+        {
+          "pass": true,
+          "msg": "E contract escalate ok"
+        },
+        {
+          "pass": true,
+          "msg": "E worktree create ok"
+        },
+        {
+          "pass": true,
+          "msg": "E worktree create existing branch rejected"
+        },
+        {
+          "pass": true,
+          "msg": "E worktree list ok"
+        },
+        {
+          "pass": true,
+          "msg": "E worktree prune ok"
+        },
+        {
+          "pass": true,
+          "msg": "E worktree no-git rejected"
+        },
+        {
+          "pass": true,
+          "msg": "E rollback list ok (empty)"
+        },
+        {
+          "pass": true,
+          "msg": "E rollback setup checkpoint"
+        },
+        {
+          "pass": true,
+          "msg": "E rollback list has checkpoint"
+        },
+        {
+          "pass": true,
+          "msg": "E rollback to ok"
+        },
+        {
+          "pass": true,
+          "msg": "E rollback invalid tag rejected"
+        },
+        {
+          "pass": true,
+          "msg": "E checkpoint create clean ok"
+        },
+        {
+          "pass": true,
+          "msg": "E checkpoint duplicate label rejected"
+        },
+        {
+          "pass": true,
+          "msg": "E checkpoint dirty tree rejected"
+        },
+        {
+          "pass": true,
+          "msg": "E checkpoint --force on dirty ok"
+        },
+        {
+          "pass": true,
+          "msg": "E help global ok"
+        },
+        {
+          "pass": true,
+          "msg": "E help global output"
+        },
+        {
+          "pass": true,
+          "msg": "E help per-command ok"
+        },
+        {
+          "pass": true,
+          "msg": "E help invalid command falls back"
+        },
+        {
+          "pass": true,
+          "msg": "E help --json ok"
+        }
+      ],
+      "passed": 57,
+      "failed": 0
+    },
+    {
+      "suite": "F-loops-retries",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "F1 failing task validate fails"
+        },
+        {
+          "pass": true,
+          "msg": "F1 taskRetryCount incremented after 1st fail"
+        },
+        {
+          "pass": true,
+          "msg": "F1 taskRetryCount incremented after 2nd fail"
+        },
+        {
+          "pass": true,
+          "msg": "F1 fixed task validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "F2 retryCount 0 after new phase"
+        },
+        {
+          "pass": true,
+          "msg": "F2 retryCount incremented on same-phase re-run"
+        },
+        {
+          "pass": true,
+          "msg": "F2 retryCount reset on new phase"
+        },
+        {
+          "pass": true,
+          "msg": "F3 contract auto-escalated after max rounds"
+        },
+        {
+          "pass": true,
+          "msg": "F3 contract status escalated"
+        },
+        {
+          "pass": true,
+          "msg": "F4 copilot phase next ok"
+        },
+        {
+          "pass": true,
+          "msg": "F4 copilot advanced"
+        },
+        {
+          "pass": true,
+          "msg": "F5 autopilot reached complete"
+        }
+      ],
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "suite": "G-gaps-coverage",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "G1 init status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G1 gates.enabled=true default (G12)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 gates.antiPlaceholder.enabled=true default (G24b)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 gates.cleanState.enabled=false opt-in (G17)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 currentRole=null default (G19)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 cleanup.schedule default (G24)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 maxRetries=10 legacy fallback"
+        },
+        {
+          "pass": true,
+          "msg": "G1 retry.tasks.maxRetries=null (falls back to 10)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 retry.features.enabled=false copilot (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 retry.phases.enabled=false copilot (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 --no-gates init status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G1 --no-gates sets gates.enabled=false (G12)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 --mode autopilot init status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G1 --mode autopilot stored"
+        },
+        {
+          "pass": true,
+          "msg": "G1 autopilot retry.features.enabled=true (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 autopilot retry.phases.enabled=true (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 autopilot retry.tasks.maxRetries=3 (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G1 autopilot currentRole=null (roles not auto-set)"
+        },
+        {
+          "pass": true,
+          "msg": "G2 config set stackMeta.lintCmd exits 0 (G1 auto-create null parent)"
+        },
+        {
+          "pass": true,
+          "msg": "G2 stackMeta.lintCmd persisted"
+        },
+        {
+          "pass": true,
+          "msg": "G2 config set stackMeta.nested.deep exits 0 (G1 deep null parent)"
+        },
+        {
+          "pass": true,
+          "msg": "G2 stackMeta.nested.deep persisted"
+        },
+        {
+          "pass": true,
+          "msg": "G2 config set phases.enabled --json-value exits 0 (G2)"
+        },
+        {
+          "pass": true,
+          "msg": "G2 phases.enabled persisted as array"
+        },
+        {
+          "pass": true,
+          "msg": "G2 config set gates.cleanState.stalePatterns --json-value exits 0"
+        },
+        {
+          "pass": true,
+          "msg": "G2 cleanState.stalePatterns persisted"
+        },
+        {
+          "pass": true,
+          "msg": "G2 config set --json-value @file exits 0"
+        },
+        {
+          "pass": true,
+          "msg": "G2 --json-value @file persisted"
+        },
+        {
+          "pass": true,
+          "msg": "G2 config set --json-value invalid exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "G2 invalid JSON error message"
+        },
+        {
+          "pass": true,
+          "msg": "G3 role planner status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 role planner sets currentRole"
+        },
+        {
+          "pass": true,
+          "msg": "G3 role planner previousRole=null"
+        },
+        {
+          "pass": true,
+          "msg": "G3 handoff has Current Role: planner"
+        },
+        {
+          "pass": true,
+          "msg": "G3 progress has role handoff line"
+        },
+        {
+          "pass": true,
+          "msg": "G3 contract propose without --criteria exits 2 (G5)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 contract propose with --criteria status=ok (G5)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 contract review as planner exits 1 (G21 requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 role evaluator previousRole=planner"
+        },
+        {
+          "pass": true,
+          "msg": "G3 contract review as evaluator status=ok (G21)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 define validate passes (contract-criteria G8)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next define→plan ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 plan.md skill exists"
+        },
+        {
+          "pass": true,
+          "msg": "G3 plan validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next plan→build ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 role generator sets currentRole"
+        },
+        {
+          "pass": true,
+          "msg": "G3 validate build as generator exits 1 (G21 requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 validate build role message (G21)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 task validate passes task-criteria (G7)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 self-eval guard: evaluator validates own work exits 1 (G23)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 self-eval guard message (G23)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 validate build as evaluator passes"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next build→verify ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 verify validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next verify→simplify ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 role simplifier sets currentRole"
+        },
+        {
+          "pass": true,
+          "msg": "G3 simplify validate fails with empty dir"
+        },
+        {
+          "pass": true,
+          "msg": "G3 simplify failure is no-empty-dirs"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next simplify→review ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 review validate passes rubric-content (G9)"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next review→ship ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 ship validate ok"
+        },
+        {
+          "pass": true,
+          "msg": "G3 phase next ship→complete status=complete"
+        },
+        {
+          "pass": true,
+          "msg": "G3 final handoff has Current Phase"
+        },
+        {
+          "pass": true,
+          "msg": "G3 final handoff has Current Role: evaluator"
+        },
+        {
+          "pass": true,
+          "msg": "G3 progress.md has ≥7 role handoff lines"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role no arg exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role invalid exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role invalid message"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role planner currentRole"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role planner previousRole=null"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role planner handoffWritten=true"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role generator previousRole=planner"
+        },
+        {
+          "pass": true,
+          "msg": "G4 role evaluator roleSkillPath non-null"
+        },
+        {
+          "pass": true,
+          "msg": "G4 currentRole persists in config"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision no text exits 2"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision record status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision appended to lessons-decisions.md"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision has dated header"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision --links-lesson status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision links lesson"
+        },
+        {
+          "pass": true,
+          "msg": "G4 decision auto-links last lesson (G18)"
+        },
+        {
+          "pass": true,
+          "msg": "G4 status decisionsTail is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 status decisionsTail non-empty"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup staleArtifacts is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup staleArtifacts non-empty"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup staleArtifact has file"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup staleArtifact has pattern"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup emptyDirs is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup emptyDirs non-empty"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup qualityDocFreshness present"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup driftFiles always []"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup schedule default"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup --auto-fix autoFixed>0"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup --auto-fix removed empty dir"
+        },
+        {
+          "pass": true,
+          "msg": "G4 cleanup clean project staleArtifacts empty"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit status=ok"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit activeGates is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit activeGates includes gates.enabled"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit activeGates includes gates.antiPlaceholder (default true)"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit activeRetry is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit activeRetry includes tasks"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit enabledPhases is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit enabledPhases=6 (no simplify)"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit suggestions is array"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit mode=copilot"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit currentRole=null"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit autopilot mode"
+        },
+        {
+          "pass": true,
+          "msg": "G4 audit gates-disabled suggestion"
+        },
+        {
+          "pass": true,
+          "msg": "G5 anti-placeholder: console.log fails validate"
+        },
+        {
+          "pass": true,
+          "msg": "G5 anti-placeholder failure name"
+        },
+        {
+          "pass": true,
+          "msg": "G5 anti-placeholder passes after fix"
+        },
+        {
+          "pass": true,
+          "msg": "G5 anti-placeholder: debugger fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 anti-placeholder: custom TODO pattern fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 contract-criteria: empty section fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 contract-criteria: placeholder-only fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 contract-criteria: real criterion passes"
+        },
+        {
+          "pass": true,
+          "msg": "G5 task-criteria: empty fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 task-criteria: placeholder-only fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 task-criteria: real criterion passes"
+        },
+        {
+          "pass": true,
+          "msg": "G5 rubric-content: stub fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 rubric-content: filled passes"
+        },
+        {
+          "pass": true,
+          "msg": "G5 clean-state: stale artifact fails"
+        },
+        {
+          "pass": true,
+          "msg": "G5 clean-state failure name"
+        },
+        {
+          "pass": true,
+          "msg": "G5 clean-state detail mentions stale artifacts"
+        },
+        {
+          "pass": true,
+          "msg": "G5 clean-state: failure exits 1"
+        },
+        {
+          "pass": true,
+          "msg": "G5 clean-state: clean source passes"
+        },
+        {
+          "pass": true,
+          "msg": "G5 clean-state: pass exits 0"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Current Phase: define"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff overwritten with new phase"
+        },
+        {
+          "pass": true,
+          "msg": "G6 progress.md appended (not truncated)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 progress has phase transition line"
+        },
+        {
+          "pass": true,
+          "msg": "G6 role overwrites handoff with role"
+        },
+        {
+          "pass": true,
+          "msg": "G6 pause writes handoff"
+        },
+        {
+          "pass": true,
+          "msg": "G6 resume resets taskRetryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 resume resets featureRetryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 resume resets phaseRetryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 resume resets retryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status has sessionState field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status has progressTail field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status has decisionsTail field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status has handoffTimestamp field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status has currentRole field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status has sessionState field (stub)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 status handoffTimestamp=null for stub (no live write)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 decision appends (first preserved)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 decision appends (second added)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 decisions file grew (append-only)"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Current Phase field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Current Role field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Current Feature field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Gate Status field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Next Action field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Retry Count field"
+        },
+        {
+          "pass": true,
+          "msg": "G6 handoff has Last Commit field"
+        },
+        {
+          "pass": true,
+          "msg": "G7 autopilot retry.features.enabled=true (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 autopilot retry.phases.enabled=true (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 autopilot retry.tasks.maxRetries=3 (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 copilot retry.features.enabled=false (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 copilot retry.tasks.maxRetries=null (→10) (G10)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 audit autopilot no high-max suggestion (3 is lowered)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 audit copilot high-max suggestion fires"
+        },
+        {
+          "pass": true,
+          "msg": "G7 resume resets taskRetryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 resume resets featureRetryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 resume resets phaseRetryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 resume resets retryCount (G11)"
+        },
+        {
+          "pass": true,
+          "msg": "G7 validate works without role set (G21 pass-through)"
+        }
+      ],
+      "passed": 168,
+      "failed": 0
+    },
+    {
+      "suite": "H-newly-fixed-gaps",
+      "cases": [
+        {
+          "pass": true,
+          "msg": "H1 feature-criteria fires when definitionOfDone empty"
+        },
+        {
+          "pass": true,
+          "msg": "H1 feature-criteria detail mentions definitionOfDone"
+        },
+        {
+          "pass": true,
+          "msg": "H1 feature-criteria blocks placeholder-only definitionOfDone"
+        },
+        {
+          "pass": true,
+          "msg": "H1 feature-criteria passes with real definitionOfDone"
+        },
+        {
+          "pass": true,
+          "msg": "H1 feature marked passes=true when definitionOfDone filled"
+        },
+        {
+          "pass": true,
+          "msg": "H2 currentFeature is set in config"
+        },
+        {
+          "pass": true,
+          "msg": "H2 currentTask is set in config"
+        },
+        {
+          "pass": true,
+          "msg": "H2 currentFeature = feature-001"
+        },
+        {
+          "pass": true,
+          "msg": "H2 currentTask = task-001"
+        },
+        {
+          "pass": true,
+          "msg": "H2 status has sessionState"
+        },
+        {
+          "pass": true,
+          "msg": "H2 status has currentRole field"
+        },
+        {
+          "pass": true,
+          "msg": "H3 generator validate in BUILD blocked by role gate"
+        },
+        {
+          "pass": true,
+          "msg": "H3 generator blocked message mentions evaluator"
+        },
+        {
+          "pass": true,
+          "msg": "H3 self-eval guard: evaluator with producedByRole=evaluator blocked"
+        },
+        {
+          "pass": true,
+          "msg": "H3 self-eval guard message"
+        },
+        {
+          "pass": true,
+          "msg": "H3 self-eval message says \"generator cannot evaluate\""
+        },
+        {
+          "pass": true,
+          "msg": "H3 evaluator validates generator work (different roles) — no self-eval block"
+        },
+        {
+          "pass": true,
+          "msg": "H3 null role → self-eval guard does not fire"
+        },
+        {
+          "pass": true,
+          "msg": "H4 role planner has persona field"
+        },
+        {
+          "pass": true,
+          "msg": "H4 planner persona"
+        },
+        {
+          "pass": true,
+          "msg": "H4 generator persona"
+        },
+        {
+          "pass": true,
+          "msg": "H4 evaluator persona"
+        },
+        {
+          "pass": true,
+          "msg": "H4 simplifier persona"
+        },
+        {
+          "pass": true,
+          "msg": "H4 custom persona via config overrides default"
+        },
+        {
+          "pass": true,
+          "msg": "H4 human output non-empty"
+        },
+        {
+          "pass": true,
+          "msg": "H5 DEFINE task-level validate as evaluator exits 1 (requires planner)"
+        },
+        {
+          "pass": true,
+          "msg": "H5 message says requires planner"
+        },
+        {
+          "pass": true,
+          "msg": "H5 DEFINE task-level validate as generator exits 1 (requires planner)"
+        },
+        {
+          "pass": true,
+          "msg": "H5 DEFINE task-level validate as planner allowed"
+        },
+        {
+          "pass": true,
+          "msg": "H5 null role → no role gate enforcement"
+        },
+        {
+          "pass": true,
+          "msg": "H6 claude-code generates CLAUDE.md"
+        },
+        {
+          "pass": true,
+          "msg": "H6 cursor generates .cursorrules"
+        },
+        {
+          "pass": true,
+          "msg": "H6 skill sets agentTool=skill in config"
+        },
+        {
+          "pass": true,
+          "msg": "H6 all generates CLAUDE.md"
+        },
+        {
+          "pass": true,
+          "msg": "H6 all generates .cursorrules"
+        },
+        {
+          "pass": true,
+          "msg": "H6 tool-registry has skill label = \"Skill Manifest\""
+        },
+        {
+          "pass": true,
+          "msg": "H6 tool-registry notes say \"not a tool name\""
+        },
+        {
+          "pass": true,
+          "msg": "H6 claude-code file = CLAUDE.md"
+        },
+        {
+          "pass": true,
+          "msg": "H6 cursor file = .cursorrules"
+        },
+        {
+          "pass": true,
+          "msg": "H7 task-criteria: empty acceptanceCriteria fails"
+        },
+        {
+          "pass": true,
+          "msg": "H7 task-criteria: placeholder-only fails"
+        },
+        {
+          "pass": true,
+          "msg": "H7 task-criteria: real criteria passes"
+        },
+        {
+          "pass": true,
+          "msg": "H7 feature-criteria: empty definitionOfDone blocks"
+        },
+        {
+          "pass": true,
+          "msg": "H7 feature-criteria: real definitionOfDone passes"
+        },
+        {
+          "pass": true,
+          "msg": "H7 contract-criteria: empty section fails"
+        },
+        {
+          "pass": true,
+          "msg": "H7 contract-criteria: real criteria passes"
+        },
+        {
+          "pass": true,
+          "msg": "H8 copilot mode in phase next JSON"
+        },
+        {
+          "pass": true,
+          "msg": "H8 copilot phase next returns status=instruction"
+        },
+        {
+          "pass": true,
+          "msg": "H8 copilot retry.features.enabled=false"
+        },
+        {
+          "pass": true,
+          "msg": "H8 copilot retry.phases.enabled=false"
+        },
+        {
+          "pass": true,
+          "msg": "H8 autopilot mode stored in config"
+        },
+        {
+          "pass": true,
+          "msg": "H8 autopilot retry.features.enabled=true"
+        },
+        {
+          "pass": true,
+          "msg": "H8 autopilot retry.phases.enabled=true"
+        },
+        {
+          "pass": true,
+          "msg": "H8 autopilot retry.tasks.maxRetries=3"
+        },
+        {
+          "pass": true,
+          "msg": "H9 null role: validate works (pass-through)"
+        },
+        {
+          "pass": true,
+          "msg": "H9 null role: contract propose works"
+        },
+        {
+          "pass": true,
+          "msg": "H9 null role: contract review works"
+        },
+        {
+          "pass": true,
+          "msg": "H9 missing feature-list: validate fails gracefully"
+        },
+        {
+          "pass": true,
+          "msg": "H10 planner in DEFINE task: not blocked by role gate"
+        },
+        {
+          "pass": true,
+          "msg": "H10 planner in build: blocked (requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 planner in verify: blocked (requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 generator in DEFINE task: blocked (requires planner)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 generator in build: blocked (requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 generator in verify: blocked (requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 evaluator in DEFINE task: blocked (requires planner)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 evaluator in build: not blocked by role gate"
+        },
+        {
+          "pass": true,
+          "msg": "H10 evaluator in verify: not blocked by role gate"
+        },
+        {
+          "pass": true,
+          "msg": "H10 simplifier in DEFINE task: blocked (requires planner)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 simplifier in build: blocked (requires evaluator)"
+        },
+        {
+          "pass": true,
+          "msg": "H10 simplifier in verify: blocked (requires evaluator)"
+        }
+      ],
+      "passed": 70,
+      "failed": 0
+    }
+  ],
+  "startedAt": "2026-06-28T07:55:23.729Z",
+  "cli": "node /tmp/dev-harness-sync/cli/dev-harness.mjs",
+  "endedAt": "2026-06-28T07:56:45.931Z",
+  "totalPassed": 437,
+  "totalFailed": 0,
+  "failures": []
+}

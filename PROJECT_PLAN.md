@@ -9,7 +9,7 @@ Implementation breakdown from architecture plan to working CLI. Each task is des
 | Milestone | Tasks | Deliverable | Est. Effort |
 |-----------|-------|-------------|-------------|
 | M0: Foundation | T1–T5 | `harness-dev init` scaffolds all 15+ files | Medium |
-| M1: Ralph Engine | T6–T9 | Inner/outer loops, state machine, progress.md | Large |
+| M1: Ralph Engine | T6–T9 | Inner/phase loops, state machine, progress.md | Large |
 | M2: Phase Orchestration | T10–T13 | Phase commands, copilot/autopilot, gates | Large |
 | M3: Depth Features | T14–T16 | Sprint contract, 3-agent templates, evaluator rubric | Medium |
 | M4: Git Workflow Depth | T17–T18 | Worktree management, rollback/checkpoint | Medium |
@@ -291,7 +291,7 @@ harness-dev status --json
 # → {"currentPhase":null,"mode":"copilot","gateHistory":[]}
 
 harness-dev phase define
-# → Runs define phase inner loop
+# → Runs define phase task loop
 # → Updates config currentPhase: "define"
 # → If copilot: prints "Define complete. Run: harness-dev phase plan"
 ```
@@ -381,9 +381,9 @@ harness-dev status --json
 }
 ```
 
-**Gate pass requires ALL features pass.** The inner loop iterates features/tasks — only when all features pass does the gate check run at phase level. No partial credit.
+**Gate pass requires ALL features pass.** The task loop iterates features/tasks — only when all features pass does the gate check run at phase level. No partial credit.
 
-**Task-level validation:** `harness-dev validate --feature X --task Y` checks only that specific task's criteria (lint for that file, tests for that module). This is what the inner loop calls per iteration.
+**Task-level validation:** `harness-dev validate --feature X --task Y` checks only that specific task's criteria (lint for that file, tests for that module). This is what the task loop calls per iteration.
 
 **Verification:**
 ```bash
@@ -398,12 +398,14 @@ harness-dev validate
 
 ---
 
-## TASK T8 — Inner Ralph Loop Engine
+## TASK T8 — Task Ralph Loop Engine
 
 **Depends on:** T6 (progress.md), T7 (gates)  
-**Files created:** `cli/lib/ralph-inner.mjs`
+**Files created:** `cli/lib/ralph-tasks.mjs` (task loop), `cli/lib/ralph-features.mjs` (feature loop), `cli/lib/ralph-phases.mjs` (phase loop + dispatcher), `cli/lib/ralph-shared.mjs` (shared utilities)
 
-**Goal:** The inner loop runs in **every phase**. It retries until the unit of work passes. The unit of work depends on the phase type:
+> **Amended 2026-06-25 (ADR: Generalized 3-level retry).** The original T8 algorithm rejected whole-feature and whole-phase retry in favor of per-task retry. The amended algorithm below introduces three independently-toggleable retry levels — **task**, **feature**, **phase** — with the escalation chain `task → feature → phase → human`. Each level has its own `enabled` flag and `maxRetries` budget under the top-level `retry` config group. Defaults preserve prior behavior (tasks enabled, features/phases disabled). See `history/decisions.md` ADR 2026-06-25 for full rationale.
+
+**Goal:** The task loop runs in **every phase**. It retries until the unit of work passes. The unit of work depends on the phase type:
 
 | Phase Type | Phases | Unit of Work | Loop Behavior |
 |------------|--------|-------------|---------------|
@@ -413,8 +415,25 @@ harness-dev validate
 **Both modes follow the same pattern: work → validate → pass or retry.** The only difference is what the loop body picks on each iteration — a new feature or the same deliverable.
 
 **Validation granularity:**
-- Feature-iterate phases: `harness-dev validate --feature <name> --task <id>` — checks one task
-- Deliverable-retry phases: `harness-dev validate` — checks the deliverable against phase criteria
+- Feature-iterate phases: `dev-harness validate --feature <name> --task <id>` — checks one task (per-task gate scoping; the gate engine runs only task-applicable checks, not whole-phase checks)
+- Deliverable-retry phases: `dev-harness validate` — checks the deliverable against phase criteria
+
+**Retry levels (configurable under `retry` group):**
+
+| Level | Counter | Reset on | Trigger | Action on exhaustion |
+|-------|---------|----------|---------|----------------------|
+| **task** (`retry.tasks.enabled`, `retry.tasks.maxRetries`) | `taskRetryCount` (per-task) | task success | per-task gate failure | fall through to feature retry (or escalate if feature retry disabled) |
+| **feature** (`retry.features.enabled`, `retry.features.maxRetries`) | `featureRetryCount` (per-feature) | feature passes | task exhaustion (or task-retry disabled) | fall through to phase retry (or escalate if phase retry disabled) |
+| **phase** (`retry.phases.enabled`, `retry.phases.maxRetries`) | `phaseRetryCount` (per-phase) | new phase | feature exhaustion (or feature-retry disabled) | escalate to human (`paused` + `status: escalated`) |
+
+**Loop-responsibility split (3 distinct files + shared leaf):**
+- **`ralph-shared.mjs`** (leaf module, no ralph-* imports): feature-list I/O (`loadFeatureList`/`saveFeatureList`), phase classification (`getPhaseType`), feature/task navigation (`getNextFeature`/`getNextTask`), output builders, shared config loader. Centralizing these breaks the circular dependency between tasks and features.
+- **`ralph-tasks.mjs`** (`runTaskLoop`) — **task loop** (innermost): iterates tasks within a single feature. Owns **task-level** retry escalation (signals `task-exhausted` to the feature loop).
+- **`ralph-features.mjs`** (`runFeatureLoop`) — **feature loop** (middle): iterates features within a phase, delegates each to the task loop. Owns **feature-level** retry escalation (signals `feature-exhausted` to the phase loop).
+- **`ralph-phases.mjs`** (`runPhase` / `continuePipeline` / `runAutopilot`) — **phase loop** (outermost) + dispatcher: `runPhase` dispatches to the feature loop (feature-iterate phases) or deliverable handler (deliverable-retry phases). `continuePipeline` owns **phase-level** retry escalation. On `feature-exhausted`/`deliverable-exhausted`: if `retry.phases.enabled` and under max → reset all features in the phase + re-run same phase; else → escalate to human.
+- **Deliverable-retry phases** (init/define/plan/review/ship) have no features/tasks; they map directly to phase-level retry (`retry.phases.*` governs them; `retry.tasks/features` are no-ops).
+
+**Dependency graph (acyclic):** `ralph-shared ← ralph-tasks ← ralph-features ← ralph-phases`
 
 **Algorithm (both modes):**
 
@@ -433,19 +452,27 @@ harness-dev validate
              Planner: scope of this task
              Generator: implement/test/simplify
              Evaluator: verify against acceptance criteria
-             Run: harness-dev validate --feature <name> --task <id>"
+             Run: dev-harness validate --feature <name> --task <id>"
          d. Agent works on this single task
-         e. Run task validation:
-            harness-dev validate --feature <name> --task <id>
+         e. Run task validation (per-task gate scoping):
+            dev-harness validate --feature <name> --task <id>
             (skip if gates.enabled is false)
-         f. If passes → mark task complete, continue to next task
-         g. If fails (≤ maxRetries times):
+         f. If passes → mark task complete, reset taskRetryCount=0, continue to next task
+         g. If fails AND retry.tasks.enabled AND taskRetryCount < retry.tasks.maxRetries:
+            - Increment taskRetryCount
             - Append lesson to progress.md
             - Git auto-commit (if git.autoCommit is true)
-            - Retry from step (a) with fresh context
-         h. If fails > maxRetries times → escalate to human
-       All tasks pass → mark feature passes=true in feature_list.json
-     All features pass → phase gate passes → outer loop advances
+            - Retry from step (a) with fresh context (task-level retry)
+         h. If task exhausted (taskRetryCount >= retry.tasks.maxRetries OR retry.tasks.enabled=false):
+            - If retry.features.enabled AND featureRetryCount < retry.features.maxRetries:
+              · Increment featureRetryCount
+              · Reset feature's task statuses + taskRetryCounts
+              · Re-sweep feature from first task (feature-level retry → back to step a)
+            - Else (feature exhausted):
+              · Signal feature-exhausted to phase loop (do NOT escalate to human here)
+              · Phase loop decides: phase retry (reset all features, re-run phase) OR escalate
+       All tasks pass → mark feature passes=true, reset featureRetryCount=0
+     All features pass → phase gate passes → phase loop advances
    
    DELIVERABLE-RETRY mode (INIT, DEFINE, PLAN, REVIEW, SHIP):
    
@@ -456,18 +483,22 @@ harness-dev validate
          Planner: define scope of this deliverable
          Generator: produce it
          Evaluator: verify against phase criteria
-         Run: harness-dev validate"
+         Run: dev-harness validate"
      d. Agent produces the deliverable
      e. Run phase validation:
-        harness-dev validate
+        dev-harness validate
         (skip if gates.enabled is false)
-     f. If passes → phase gate passes → outer loop advances
-     g. If fails (≤ maxRetries times):
+     f. If passes → phase gate passes → phase loop advances
+     g. If fails AND retry.phases.enabled AND phaseRetryCount < retry.phases.maxRetries:
+        - Increment phaseRetryCount
         - Append lesson to progress.md
         - Git auto-commit (if git.autoCommit is true)
-        - Retry from step (a) with fresh context
-     h. If fails > maxRetries times → escalate to human
+        - Retry from step (a) with fresh context (phase-level retry for deliverables)
+     h. If deliverable exhausted (phaseRetryCount >= retry.phases.maxRetries OR retry.phases.enabled=false):
+        - Signal deliverable-exhausted to phase loop → escalate to human
 ```
+
+**Backward compatibility:** configs without a `retry` group default to `{tasks:{enabled:true,maxRetries:<maxRetries>}, features:{enabled:false}, phases:{enabled:false}}`, preserving the pre-amendment behavior (per-task retry only for feature-iterate phases; per-deliverable retry via the legacy `retryCount` path for deliverable-retry phases).
 
 **Key difference from previous design:** The loop no longer retries the entire phase — it retries individual tasks. This is more resource-efficient (a failing lint on one task doesn't redo completed tasks) and matches the Ralph/walkinglabs pattern of "one feature at a time."
 
@@ -489,23 +520,23 @@ harness-dev phase build
 
 ---
 
-## TASK T9 — Outer Ralph Loop Engine
+## TASK T9 — Phase Ralph Loop Engine
 
-**Depends on:** T8 (inner loop — handles all task/feature/deliverable iteration)  
-**Files created:** `cli/lib/ralph-outer.mjs`
+**Depends on:** T8 (task loop — handles all task/feature/deliverable iteration)  
+**Files created:** `cli/lib/ralph-phases.mjs` (phase loop + `runPhase` dispatcher; shared utilities in `ralph-shared.mjs`)
 
-**Goal:** The outer loop only advances phases. It does NOT iterate tasks or features — that's entirely the inner loop's job. The outer loop's job is to move through the pipeline in order, calling the inner loop at each phase.
+**Goal:** The phase loop only advances phases. It does NOT iterate tasks or features — that's entirely the task loop's job. The phase loop's job is to move through the pipeline in order, calling the task loop at each phase.
 
 **Copilot mode (default):**
-The outer loop is conceptually trivial — it runs one phase and exits. The human decides when to start the next phase:
+The phase loop is conceptually trivial — it runs one phase and exits. The human decides when to start the next phase:
 ```
-harness-dev phase define   → inner loop runs DEFINE → gate passes → exit
-harness-dev phase plan     → inner loop runs PLAN → gate passes → exit
+harness-dev phase define   → task loop runs DEFINE → gate passes → exit
+harness-dev phase plan     → task loop runs PLAN → gate passes → exit
 ...human decides when to continue...
 ```
 
 **Autopilot mode:**
-The outer loop auto-advances through all phases. After each phase gate passes, it immediately starts the next phase without waiting for human input.
+The phase loop auto-advances through all phases. After each phase gate passes, it immediately starts the next phase without waiting for human input.
 
 **Algorithm (autopilot):**
 ```
@@ -515,8 +546,8 @@ The outer loop auto-advances through all phases. After each phase gate passes, i
    INIT → DEFINE → PLAN → BUILD → VERIFY → [SIMPLIFY] → REVIEW → SHIP
    (Skip SIMPLIFY if not in phases.enabled)
 4. At each phase:
-   a. Run inner loop (T8) which handles all task/feature/deliverable iteration
-   b. Inner loop returns: PASSED (all work complete) or ESCALATED (human needed)
+   a. Run phase dispatcher (runPhase) which routes to the feature loop (feature-iterate phases) or deliverable handler (deliverable-retry phases)
+   b. Sub-loop returns: PASSED (all work complete) or ESCALATED (human needed)
    c. If PASSED → advance currentPhase in config
    d. If ESCALATED → stop, print reason, wait for human resolution
 5. All phases complete → one full pipeline iteration finished
@@ -533,7 +564,7 @@ The outer loop auto-advances through all phases. After each phase gate passes, i
 ```bash
 harness-dev set-mode autopilot
 harness-dev phase define
-# → Planner designs outer loop in DEFINE phase
+# → Planner designs phase loop in DEFINE phase
 # → Autopilot: auto-advances to PLAN after gate passes
 # → Autopilot: auto-advances to BUILD after gate passes
 # → ... continues through SHIP
@@ -544,7 +575,7 @@ harness-dev phase define
 
 ## TASK T10 — Phase Command Orchestrator
 
-**Depends on:** T8 (inner loop), T9 (outer loop)  
+**Depends on:** T8 (task loop), T9 (phase loop)  
 **Files created:** `cli/commands/phase.mjs`
 
 **Goal:** Unified `harness-dev phase <name>` command that:
@@ -650,7 +681,7 @@ harness-dev phase define
 **Behavior:**
 - `harness-dev set-mode copilot` (default on init)
 - Phase runs when invoked: `harness-dev phase <name>`
-- Inner loop runs autonomously
+- Task/feature loops run autonomously within the phase
 - Gate result printed for human review
 - Human decides to advance: `harness-dev phase <next>`
 - Auto-prompt: if gate passes, print "Advance to <next>? (y/n)"
@@ -686,19 +717,19 @@ human: y
 **Depends on:** T10 (phase orchestrator), T11 (copilot as base)  
 **Files created:** (extends T11 — same modes.mjs)
 
-**Goal:** Fully autonomous mode after DEFINE phase. Agents run the entire outer loop.
+**Goal:** Fully autonomous mode after DEFINE phase. Agents run the entire phase loop.
 
 **Behavior:**
 - `harness-dev set-mode autopilot`
 - Must be in DEFINE phase or later
-- In DEFINE: Planner designs full outer loop (feature order, gate criteria per phase)
+- In DEFINE: Planner designs full phase loop (feature order, gate criteria per phase)
 - After DEFINE gate passes: agents auto-advance through PLAN→BUILD→VERIFY→SIMPLIFY→REVIEW→SHIP
 - Human notified only at:
   - Gate failures (with escalation after 3×)
   - Pipeline iteration complete
   - All features complete
-- Pause/resume: `harness-dev pause` → outer loop stops after current phase gate
-- In DEFINE phase, Planner writes `plans/outer-loop-plan.md` with:
+- Pause/resume: `harness-dev pause` → phase loop stops after current phase gate
+- In DEFINE phase, Planner writes `plans/phase-loop-plan.md` with:
   - Feature delivery order
   - Estimated iterations per feature
   - Risk factors and escalation thresholds
@@ -707,11 +738,11 @@ human: y
 ```bash
 harness-dev set-mode autopilot
 harness-dev phase define
-# → Planner writes outer-loop-plan.md
+# → Planner writes phase-loop-plan.md
 # → Gate passes → auto-advances to PLAN
 # → ... continues through SHIP
 # → "Pipeline complete. 3 features remaining."
-# → "Outer loop will repeat. Next: DEFINE (iteration 2)"
+# → "Phase loop will repeat. Next: DEFINE (iteration 2)"
 # → human can `harness-dev pause` anytime
 ```
 
@@ -991,7 +1022,7 @@ cd ../feat-auth && harness-dev status
 
 ## TASK T18 — Rollback & Branch Recovery (Anthropic Middle Iterations)
 
-**Depends on:** T9 (outer loop tags iterations), T10 (phase orchestrator)  
+**Depends on:** T9 (phase loop tags iterations), T10 (phase orchestrator)  
 **Files created:** `cli/commands/rollback.mjs`, `cli/commands/checkpoint.mjs`
 
 **Goal:** Support Anthropic's "middle iteration" pattern — the user can stop progress and recover a previous iteration. Also supports full feature rollback.
@@ -1208,7 +1239,7 @@ T1 (CLI skeleton)
 | 2 | T2, T3 | Need detection + templates before scaffold |
 | 3 | T4 | Scaffold creates all files — core milestone |
 | 4 | T5, T6, T7 | Config, progress, gates — state machinery |
-| 5 | T8, T9, T10 | Inner/outer loops + phase command — the engine |
+| 5 | T8, T9, T10 | Inner/phase loops + phase command — the engine |
 | 6 | T11, T12, T13 | Modes + status — the user-facing controls |
 | 7 | T14, T15, T16 | Contracts, agents, rubric — depth features |
 | 8 | T17, T18 | Worktree management, rollback/checkpoint — git workflow depth |

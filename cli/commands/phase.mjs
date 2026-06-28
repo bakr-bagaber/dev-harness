@@ -10,8 +10,8 @@
  */
 import { CliError, EXIT, die } from '../lib/errors.mjs';
 import { transitionPhase, getPhaseOrder, loadConfig } from '../lib/state.mjs';
-import { runPhase, getPhaseType } from '../lib/ralph-tasks.mjs';
-import { continuePipeline } from '../lib/ralph-phases.mjs';
+import { runPhase, continuePipeline } from '../lib/ralph-phases.mjs';
+import { getPhaseType } from '../lib/ralph-shared.mjs';
 import { promptYesNo, shouldConfirmGates, shouldAutoPrompt } from '../lib/modes.mjs';
 import { parseCommandArgs, phaseLabel } from '../lib/command-helpers.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';

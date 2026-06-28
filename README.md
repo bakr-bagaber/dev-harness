@@ -174,18 +174,22 @@ The workflow is a **sequential loop** — not parallel. At each phase, the agent
 
 ### 3-Level Loops (Ralph Pattern)
 
-The architecture is built on the **Ralph pattern** — 3 nested loops that give the agent fresh context on each retry.
+The architecture is built on the **Ralph pattern** — 3 nested loops that give the agent fresh context on each retry. Each loop is a distinct module with a single responsibility:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    🌐 PHASE LOOP (outer)                  │
+│  cli/lib/ralph-phases.mjs — runPhase / continuePipeline   │
 │  define → plan → build → verify → [simplify] → review → ship │
 │  (phase transitions, gate validation, human escalation)  │
+│  Dispatches to feature loop (feature-iterate phases) or  │
+│  deliverable handler (deliverable-retry phases)           │
 └──────────────────────┬───────────────────────────────────┘
                        │ for each phase
                        ▼
 ┌──────────────────────────────────────────────────────────┐
 │                    🔄 FEATURE LOOP (middle)              │
+│  cli/lib/ralph-features.mjs — runFeatureLoop              │
 │  For each feature in feature-list.json:                  │
 │    check definitionOfDone → implement → validate         │
 │  (feature-level criteria gate before marking passes=true) │
@@ -194,11 +198,16 @@ The architecture is built on the **Ralph pattern** — 3 nested loops that give 
                        ▼
 ┌──────────────────────────────────────────────────────────┐
 │                    🔁 TASK LOOP (inner)                  │
+│  cli/lib/ralph-tasks.mjs — runTaskLoop                    │
 │  For each task in feature:                               │
 │    check acceptanceCriteria → implement → validate       │
 │    pass=next task / fail=retry (fresh git context)       │
 │  (task-level criteria gate before marking complete)       │
 └──────────────────────────────────────────────────────────┘
+
+Shared utilities (feature-list I/O, phase classification, output builders)
+live in cli/lib/ralph-shared.mjs — the leaf of the dependency graph:
+  ralph-shared ← ralph-tasks ← ralph-features ← ralph-phases
 ```
 
 When building or verifying, the harness enters the **task loop** (innermost) that iterates over tasks within a feature. When all tasks in a feature pass, the **feature loop** (middle) advances to the next feature. When all features pass, the **phase loop** (outer) advances to the next phase.

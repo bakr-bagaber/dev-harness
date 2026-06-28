@@ -1,281 +1,92 @@
 /**
- * ralph-tasks — Task Ralph Loop Engine.
+ * ralph-tasks — Task Ralph Loop Engine (innermost loop).
  *
- * Runs the work → validate → pass/retry loop for every phase.
- * Two modes:
- *   - Feature-iterate (BUILD, VERIFY, SIMPLIFY): iterates features/tasks
- *   - Deliverable-retry (INIT, DEFINE, PLAN, REVIEW, SHIP): retries same deliverable
+ * Iterates tasks within a single feature. For each task, it prints
+ * instructions for the agent (planner → generator → evaluator) and returns
+ * a result describing the next step. It does NOT do the work itself — the
+ * external agent reads the instructions, does the work, then runs
+ * `dev-harness validate --feature <id> --task <id>`.
  *
- * The engine prints instructions for the agent. It does NOT do the work itself.
+ * Responsibilities:
+ *   - Find the next pending/in-progress task in a feature
+ *   - Track currentFeature / currentTask in the state machine
+ *   - Own task-level retry escalation (task → feature signal)
+ *
+ * Does NOT own:
+ *   - Feature iteration (that's ralph-features.mjs)
+ *   - Phase iteration (that's ralph-phases.mjs)
+ *   - Feature-list I/O or phase classification (that's ralph-shared.mjs)
+ *
+ * Three Ralph loops:
+ *   - ralph-tasks.mjs    — task loop (innermost): iterates tasks within a feature
+ *   - ralph-features.mjs — feature loop (middle): iterates features within a phase
+ *   - ralph-phases.mjs   — phase loop (outermost): iterates phases in the pipeline
  *
  * Usage:
- *   import { runPhase } from './ralph-tasks.mjs';
- *   const result = runPhase('/path/to/project', 'build');
+ *   import { runTaskLoop } from './ralph-tasks.mjs';
+ *   const result = runTaskLoop('/path/to/project', 'build', feature, { json: true });
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { loadConfig, getRetryConfig, set as stateSet } from './state.mjs';
-import { validateAgainstSchema } from './validate-schema.mjs';
+import { set as stateSet } from './state.mjs';
 import { gitHardResetClean } from './git.mjs';
-import { phaseLabel } from './command-helpers.mjs';
-import { FEATURE_LIST_SCHEMA_PATH, FEATURE_LIST_PATH } from './paths.mjs';
-import { DEFAULT_MAX_RETRIES } from './constants.mjs';
-
-// ── Output builders (inlined from ralph-output.mjs, which was removed) ───────
-
-function buildFeatureIterateOutput(phase, feature, task, mode, maxRetries, resetOnRetry, autoCommit) {
-  const label = phaseLabel(phase);
-  let extra = '';
-  if (phase === 'simplify') {
-    extra = `\n\nSimplifier focus:\n` +
-      `- Remove code smells, deep nesting, DRY violations, dead code\n` +
-      `- Consolidate duplicate logic\n` +
-      `- Simplify complex conditionals\n` +
-      `- Ensure tests still pass after simplification\n` +
-      `- Delete more than you add`;
-  }
-  return `═══ ${phase.toUpperCase()} PHASE ═══\n` +
-    `Mode: feature-iterate\n\n` +
-    `${label} — Feature: ${feature.name} — Task: ${task.description}\n` +
-    `Current feature: ${feature.name}\n` +
-    `Current task: ${task.description}\n\n` +
-    `Planner: scope of this task\n` +
-    `Generator: implement/test/simplify\n` +
-    `Evaluator: verify against acceptance criteria\n` +
-    `Run: dev-harness validate --feature ${feature.id} --task ${task.id}\n` +
-    `Retry: ${maxRetries} max, reset on success${resetOnRetry ? ', git reset on retry' : ''}${autoCommit ? ', auto-commit' : ''}` +
-    extra;
-}
-
-function buildDeliverableRetryOutput(phase, mode, maxRetries, resetOnRetry, autoCommit) {
-  const label = phaseLabel(phase);
-  return `═══ ${phase.toUpperCase()} PHASE ═══\n` +
-    `Mode: deliverable-retry\n\n` +
-    `${label}: produce the deliverable\n\n` +
-    `Planner: define scope of this deliverable\n` +
-    `Generator: produce it\n` +
-    `Evaluator: verify against phase criteria\n` +
-    `Run: dev-harness validate\n` +
-    `Retry: ${maxRetries} max${resetOnRetry ? ', git reset on retry' : ''}${autoCommit ? ', auto-commit' : ''}`;
-}
-
-// ── Phase type classification ────────────────────────────────────────────────
-
-/** Phases that iterate features (each feature has tasks). */
-const FEATURE_ITERATE = new Set(['build', 'verify', 'simplify']);
-
-/** Phases that produce a single deliverable and retry it on failure. */
-const DELIVERABLE_RETRY = new Set(['init', 'define', 'plan', 'review', 'ship']);
+import {
+  loadLoopConfig,
+  buildFeatureIterateOutput,
+  getNextTask,
+} from './ralph-shared.mjs';
 
 /**
- * Determine the loop mode for a given phase.
- * @param {string} phase
- * @returns {'feature-iterate'|'deliverable-retry'|null}
- */
-export function getPhaseType(phase) {
-  if (FEATURE_ITERATE.has(phase)) {return 'feature-iterate';}
-  if (DELIVERABLE_RETRY.has(phase)) {return 'deliverable-retry';}
-  return null;
-}
-
-// ── Feature list I/O ─────────────────────────────────────────────────────────
-
-/**
- * Get path to feature_list.json.
- * @param {string} targetDir
- * @returns {string}
- */
-function getFeatureListPath(targetDir) {
-  return FEATURE_LIST_PATH(targetDir);
-}
-
-/**
- * Default feature list (empty, one placeholder feature).
- * @returns {object}
- */
-function getDefaultFeatureList() {
-  return {
-    version: '0.1',
-    features: [
-      {
-        id: 'feature-001',
-        name: 'Feature 1',
-        description: 'Replace with actual feature description',
-        passes: false,
-        tasks: [
-          { id: 'task-001', description: 'First task', status: 'pending' },
-        ],
-      },
-    ],
-  };
-}
-
-/**
- * Load feature_list.json. Returns defaults if missing/invalid.
- * @param {string} targetDir
- * @returns {{ features: Array, ok: boolean, path: string }}
- */
-export function loadFeatureList(targetDir) {
-  const flPath = getFeatureListPath(targetDir);
-  if (!existsSync(flPath)) {
-    return { ...getDefaultFeatureList(), ok: false, path: flPath };
-  }
-  try {
-    const raw = readFileSync(flPath, 'utf-8');
-    const parsed = JSON.parse(raw);
-    const result = { version: parsed.version || '0.1', features: parsed.features || [], ok: true, path: flPath };
-    // Schema validation — non-blocking: return errors in result. Library does
-    // NOT write to stderr (keeps error contract clean for --json consumers).
-    const schemaResult = validateAgainstSchema(parsed, FEATURE_LIST_SCHEMA_PATH);
-    result.schemaErrors = schemaResult.ok ? [] : schemaResult.errors;
-    return result;
-  } catch {
-    return { ...getDefaultFeatureList(), ok: false, path: flPath };
-  }
-}
-
-/**
- * Save feature_list.json.
- * @param {string} targetDir
- * @param {object} data
- * @returns {{ ok: boolean, error: string|null }}
- */
-export function saveFeatureList(targetDir, data) {
-  try {
-    const flPath = getFeatureListPath(targetDir);
-    mkdirSync(dirname(flPath), { recursive: true });
-    writeFileSync(flPath, JSON.stringify({ version: '0.1', features: data.features }, null, 2) + '\n', 'utf-8');
-    return { ok: true, error: null };
-  } catch (err) {
-    return { ok: false, error: err.message };
-  }
-}
-
-/**
- * Find the next incomplete feature (passes=false).
- * @param {Array} features
- * @returns {object|null}
- */
-export function getNextFeature(features) {
-  return features.find(f => !f.passes) || null;
-}
-
-/**
- * Find the next uncompleted task in a feature.
- * @param {object} feature
- * @returns {object|null}
- */
-export function getNextTask(feature) {
-  if (!feature.tasks) {return null;}
-  return feature.tasks.find(t => t.status === 'pending' || t.status === 'in_progress') || null;
-}
-
-// ── Inner loop ───────────────────────────────────────────────────────────────
-
-/**
- * Run the inner Ralph loop for a phase.
+ * Run the task loop for a single feature.
  *
- * This function prints instructions and returns a result object.
- * It does NOT modify files — the agent reads the instructions and does the work.
+ * Finds the next pending/in-progress task in `feature`, writes the agent
+ * instructions, and returns a result object. When all tasks in the feature
+ * are complete, signals 'feature-complete' so the feature loop can advance.
+ *
+ * Task-level retry escalation: when task retries are exhausted, signals
+ * 'task-exhausted' so the feature loop can decide whether to retry the
+ * feature or escalate to the phase loop.
  *
  * @param {string} targetDir
  * @param {string} phase
+ * @param {object} feature — feature object from feature_list.json
  * @param {object} [options]
  * @param {boolean} [options.json] — JSON output mode
- * @param {boolean} [options.gitOps] — opt-in: execute git reset/clean on retry (default off)
- * @returns {Promise<{ ok: boolean, status: string, message: string, phase: string, iteration: number, mode: string, details: object }>}
+ * @param {boolean} [options.gitOps] — opt-in: execute git reset/clean on retry
+ * @returns {Promise<{ ok: boolean, status: string, message: string, phase: string, details: object }>}
  */
-export async function runPhase(targetDir, phase, options = {}) {
+export async function runTaskLoop(targetDir, phase, feature, options = {}) {
   const { json = false, gitOps = false } = options;
 
-  // Load config
-  const { config, ok: configOk } = loadConfig(targetDir);
+  const { config, ok: configOk, mode, retryCfg, maxRetries, resetOnRetry, autoCommit } = loadLoopConfig(targetDir);
   if (!configOk) {
-    return { ok: false, status: 'error', message: 'Cannot load config', phase, iteration: 0, mode: 'unknown', details: {} };
+    return { ok: false, status: 'error', message: 'Cannot load config', phase, details: {} };
   }
 
-  const mode = config.mode ?? 'copilot';
-  const retryCfg = getRetryConfig(config);
-  // For display/output backward compat — the primary task retry budget.
-  const maxRetries = retryCfg.tasks.maxRetries;
-  const resetOnRetry = config.git?.resetOnRetry === true;
-  const autoCommit = config.git?.autoCommit === true;
-  const phaseType = getPhaseType(phase);
-
-  if (!phaseType) {
-    return { ok: false, status: 'error', message: `Unknown phase type for "${phase}"`, phase, iteration: 0, mode, details: {} };
-  }
-
-  // ── v3.1.0+ 3-level retry escalation checks ──────────────────────────────
-  // Inner loop owns task + feature escalation. Phase escalation is the outer
-  // loop's job (signaled via 'feature-exhausted' / 'deliverable-exhausted').
-  const retryCount = config.retryCount ?? 0;
+  // ── Task-level retry escalation check ────────────────────────────────────
+  // The task loop owns task escalation. When task retries are exhausted it
+  // signals 'task-exhausted' to the feature loop (which owns feature retry).
   const taskRetryCount = config.taskRetryCount ?? 0;
-  const featureRetryCount = config.featureRetryCount ?? 0;
-  const phaseRetryCount = config.phaseRetryCount ?? 0;
-
-  if (phaseType === 'feature-iterate') {
-    // Task level
-    if (retryCfg.tasks.enabled && taskRetryCount >= retryCfg.tasks.maxRetries) {
-      // Task exhausted → feature level
-      if (retryCfg.features.enabled && featureRetryCount >= retryCfg.features.maxRetries) {
-        // Feature exhausted → signal phase loop (do NOT escalate to human here)
-        return {
-          ok: false,
-          status: 'feature-exhausted',
-          message: `Feature retries exhausted (${featureRetryCount}/${retryCfg.features.maxRetries}) for phase "${phase}" after task retries (${taskRetryCount}/${retryCfg.tasks.maxRetries}). Signaling phase loop for phase retry or escalation.`,
-          phase,
-          iteration: featureRetryCount,
-          mode,
-          details: { taskRetryCount, featureRetryCount, phaseRetryCount, retryCfg },
-        };
-      }
-      if (!retryCfg.features.enabled) {
-        // Feature retry disabled → signal phase loop immediately
-        return {
-          ok: false,
-          status: 'feature-exhausted',
-          message: `Task retries exhausted (${taskRetryCount}/${retryCfg.tasks.maxRetries}) for phase "${phase}" and feature retry is disabled. Signaling phase loop for phase retry or escalation.`,
-          phase,
-          iteration: taskRetryCount,
-          mode,
-          details: { taskRetryCount, featureRetryCount, phaseRetryCount, retryCfg },
-        };
-      }
-      // Feature retry still has budget — fall through; the validate command
-      // handles the feature reset + re-sweep on the next iteration.
-    }
-  } else {
-    // Deliverable-retry phase → phase-level retry only
-    if (retryCfg.phases.enabled && phaseRetryCount >= retryCfg.phases.maxRetries) {
-      return {
-        ok: false,
-        status: 'deliverable-exhausted',
-        message: `Phase retries exhausted (${phaseRetryCount}/${retryCfg.phases.maxRetries}) for deliverable phase "${phase}". Signaling phase loop for escalation.`,
-        phase,
-        iteration: phaseRetryCount,
-        mode,
-        details: { phaseRetryCount, retryCount, retryCfg },
-      };
-    }
-    if (!retryCfg.phases.enabled && retryCount >= retryCfg.tasks.maxRetries) {
-      // Legacy path: phases retry disabled, use retryCount vs maxRetries
-      return {
-        ok: false,
-        status: 'deliverable-exhausted',
-        message: `Retries exhausted (${retryCount}/${retryCfg.tasks.maxRetries}) for deliverable phase "${phase}" and phase retry is disabled. Signaling phase loop for escalation.`,
-        phase,
-        iteration: retryCount,
-        mode,
-        details: { retryCount, phaseRetryCount, retryCfg },
-      };
-    }
+  if (retryCfg.tasks.enabled && taskRetryCount >= retryCfg.tasks.maxRetries) {
+    return {
+      ok: false,
+      status: 'task-exhausted',
+      message: `Task retries exhausted (${taskRetryCount}/${retryCfg.tasks.maxRetries}) for feature "${feature?.id}" in phase "${phase}". Signaling feature loop for feature retry or escalation.`,
+      phase,
+      mode,
+      details: {
+        featureId: feature?.id,
+        taskRetryCount,
+        featureRetryCount: config.featureRetryCount ?? 0,
+        phaseRetryCount: config.phaseRetryCount ?? 0,
+        retryCfg,
+      },
+    };
   }
 
   // ── Opt-in git ops: fresh context on retry ──────────────────────────────
   // When --git-ops is passed AND this is a retry (retryCount > 0), execute a
   // hard reset to the last commit + clean untracked files. This gives the
   // "fresh context" Ralph requires without forcing it on agent-agnostic users.
+  const retryCount = config.retryCount ?? 0;
   let gitResetPerformed = false;
   if (gitOps && retryCount > 0) {
     const resetResult = await gitHardResetClean(targetDir);
@@ -290,110 +101,58 @@ export async function runPhase(targetDir, phase, options = {}) {
     }
   }
 
-  // ── Feature-iterate mode (BUILD, VERIFY, SIMPLIFY) ────────────────────────
+  // ── Find the next task in this feature ───────────────────────────────────
+  const task = getNextTask(feature);
 
-  if (phaseType === 'feature-iterate') {
-    const fl = loadFeatureList(targetDir);
-    const feature = getNextFeature(fl.features);
-    const featuresTotal = fl.features.length;
-    const featuresDone = fl.features.filter(f => f.passes).length;
-
-    if (!feature) {
-      // All features pass — phase gate passes
-      stateSet(targetDir, 'currentFeature', null);
-      stateSet(targetDir, 'currentTask', null);
-      return {
-        ok: true,
-        status: 'complete',
-        message: `All ${featuresTotal} feature(s) pass. Phase gate passes.`,
-        phase,
-        iteration: 0,
-        mode,
-        details: { featuresTotal, featuresDone, currentFeature: null, currentTask: null },
-      };
-    }
-
-    const task = getNextTask(feature);
-    if (!task) {
-      // Feature has all tasks complete but passes=false → mark it passing
-      feature.passes = true;
-      saveFeatureList(targetDir, fl);
-      return await runPhase(targetDir, phase, options); // Recurse to get next feature
-    }
-
-    // Track current feature/task in state machine (G14: handoff shows active work)
-    stateSet(targetDir, 'currentFeature', feature.id);
-    stateSet(targetDir, 'currentTask', task.id);
-
-    const output = buildFeatureIterateOutput(phase, feature, task, mode, maxRetries, resetOnRetry, autoCommit);
-
-    if (json) {
-      return {
-        ok: true,
-        status: 'instruction',
-        message: `${phaseLabel(phase)} — Feature: ${feature.name} — Task: ${task.description}`,
-        phase,
-        iteration: 1,
-        mode,
-        details: {
-          featuresTotal,
-          featuresDone,
-          featureId: feature.id,
-          featureName: feature.name,
-          taskId: task.id,
-          taskDescription: task.description,
-          phaseType,
-          maxRetries,
-          retry: retryCfg,
-          taskRetryCount: config.taskRetryCount ?? 0,
-          featureRetryCount: config.featureRetryCount ?? 0,
-          phaseRetryCount: config.phaseRetryCount ?? 0,
-          resetOnRetry,
-          autoCommit,
-          gitOps,
-          gitResetPerformed,
-          instructions: output,
-        },
-      };
-    }
-
-    // Human output
-    process.stdout.write(output);
-    process.stdout.write(`\n═══════════════════════════════════════\n`);
-    process.stdout.write(`Run: dev-harness validate --feature ${feature.id} --task ${task.id}\n`);
-    process.stdout.write(`═══════════════════════════════════════\n`);
-
+  // All tasks complete but feature.passes is still false → signal feature
+  // completion so the feature loop can run the feature-level criteria gate
+  // and advance to the next feature.
+  if (!task) {
+    stateSet(targetDir, 'currentTask', null);
     return {
       ok: true,
-      status: 'instruction',
-      message: `Working on: ${feature.name} — ${task.description}`,
+      status: 'feature-complete',
+      message: `All tasks complete for feature "${feature.name}". Feature loop should run criteria gate.`,
       phase,
-      iteration: 1,
       mode,
-      details: { featureId: feature.id, taskId: task.id },
+      details: {
+        featureId: feature.id,
+        featureName: feature.name,
+        tasksTotal: feature.tasks?.length ?? 0,
+        currentFeature: feature.id,
+        currentTask: null,
+      },
     };
   }
 
-  // ── Deliverable-retry mode (INIT, DEFINE, PLAN, REVIEW, SHIP) ────────────
+  // Track current task in state machine
+  stateSet(targetDir, 'currentFeature', feature.id);
+  stateSet(targetDir, 'currentTask', task.id);
 
-  const output = buildDeliverableRetryOutput(phase, mode, maxRetries, resetOnRetry, autoCommit);
+  // Build instructions for the agent
+  const output = buildFeatureIterateOutput(phase, feature, task, maxRetries, resetOnRetry, autoCommit);
 
   if (json) {
     return {
       ok: true,
       status: 'instruction',
-      message: `${phaseLabel(phase)}: produce the deliverable`,
+      message: `${feature.name} — ${task.description}`,
       phase,
-      iteration: 1,
       mode,
       details: {
-        phaseType,
+        featureId: feature.id,
+        featureName: feature.name,
+        taskId: task.id,
+        taskDescription: task.description,
+        phaseType: 'feature-iterate',
         maxRetries,
         retry: retryCfg,
-        retryCount: config.retryCount ?? 0,
+        taskRetryCount,
+        featureRetryCount: config.featureRetryCount ?? 0,
         phaseRetryCount: config.phaseRetryCount ?? 0,
         resetOnRetry,
         autoCommit,
+        gitResetPerformed,
         instructions: output,
       },
     };
@@ -402,17 +161,15 @@ export async function runPhase(targetDir, phase, options = {}) {
   // Human output
   process.stdout.write(output);
   process.stdout.write(`\n═══════════════════════════════════════\n`);
-  process.stdout.write(`Run: dev-harness validate\n`);
+  process.stdout.write(`Run: dev-harness validate --feature ${feature.id} --task ${task.id}\n`);
   process.stdout.write(`═══════════════════════════════════════\n`);
 
   return {
     ok: true,
     status: 'instruction',
-    message: `${phaseLabel(phase)}: produce the deliverable`,
+    message: `Working on: ${feature.name} — ${task.description}`,
     phase,
-    iteration: 1,
     mode,
-    details: {},
+    details: { featureId: feature.id, taskId: task.id },
   };
 }
-

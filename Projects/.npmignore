@@ -1,6 +1,0 @@
-# npm publish — include everything in files field, exclude dev-only
-node_modules/
-test/
-docs-site-templates/
-eslint.config.mjs
-.gitignore
