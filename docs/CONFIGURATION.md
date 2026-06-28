@@ -159,14 +159,14 @@ dev-harness config set git.resetOnRetry true
 dev-harness config set phases.enabled '["define","plan","build","verify","simplify","review","ship"]'
 ```
 
-### Agent Tones
+### Agent Tones (Personas)
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `agents.tone.planner` | string | `"Analytical and precise..."` | Planner persona instructions |
-| `agents.tone.generator` | string | `"Focused and practical..."` | Generator persona instructions |
-| `agents.tone.evaluator` | string | `"Skeptical and thorough..."` | Evaluator persona instructions |
-| `agents.tone.simplifier` | string | `"Relentless about clarity..."` | Simplifier persona instructions |
+| `agents.tone.planner` | string | `"Analytical and precise..."` | Planner persona — injected into `role planner` output |
+| `agents.tone.generator` | string | `"Focused and practical..."` | Generator persona — injected into `role generator` output |
+| `agents.tone.evaluator` | string | `"Skeptical and thorough..."` | Evaluator persona — injected into `role evaluator` output |
+| `agents.tone.simplifier` | string | `"Relentless about clarity..."` | Simplifier persona — injected into `role simplifier` output |
 
 **Example:**
 ```bash
@@ -181,6 +181,8 @@ These fields are managed by the harness automatically. **Do not edit manually.**
 |-----|------|-------------|
 | `currentPhase` | string | Current pipeline phase |
 | `currentRole` | string\|null | Current agent role (planner/generator/evaluator/simplifier/null). Set via `dev-harness role` (G19) |
+| `currentFeature` | string\|null | Currently active feature ID (tracked by state machine, set by ralph-inner) |
+| `currentTask` | string\|null | Currently active task ID (tracked by state machine, set by ralph-inner) |
 | `retryCount` | integer | (Legacy) phase-level retry count — superseded by `phaseRetryCount` for the new 3-level model; kept for backward compat / deliverable-retry phases. |
 | `taskRetryCount` | integer | Per-task retry count (reset on task success) |
 | `featureRetryCount` | integer | Per-feature retry count (reset when feature passes) — v3.1.0+ |
@@ -205,16 +207,22 @@ These fields are managed by the harness automatically. **Do not edit manually.**
   "agentTool": "claude-code",
   "mode": "copilot",
   "currentPhase": null,
+  "currentRole": null,
+  "currentFeature": null,
+  "currentTask": null,
   "paused": false,
   "features": { "remaining": 0, "passing": 0, "total": 0 },
   "gates": {
     "enabled": true,
     "checks": ["all"],
-    "coverage": { "enabled": true, "threshold": 80 }
+    "coverage": { "enabled": false, "threshold": 80 },
+    "cleanState": { "enabled": false, "stalePatterns": [], "startupCmd": null },
+    "antiPlaceholder": { "enabled": true, "patterns": [] }
   },
+  "cleanup": { "schedule": "0 2 * * 0", "autoFix": false },
   "git": {
     "autoCommit": false,
-    "autoTag": true,
+    "autoTag": false,
     "resetOnRetry": false,
     "branch": null,
     "clean": true,
@@ -222,7 +230,7 @@ These fields are managed by the harness automatically. **Do not edit manually.**
     "lastCommitMessage": null
   },
   "phases": {
-    "enabled": ["define", "plan", "build", "verify", "simplify", "review", "ship"]
+    "enabled": ["define", "plan", "build", "verify", "review", "ship"]
   },
   "agents": {
     "tone": {
@@ -233,17 +241,17 @@ These fields are managed by the harness automatically. **Do not edit manually.**
     }
   },
   "maxRetries": 10,
+  "retry": {
+    "tasks": { "enabled": true, "maxRetries": null },
+    "features": { "enabled": false, "maxRetries": 2 },
+    "phases": { "enabled": false, "maxRetries": 2 }
+  },
   "retryCount": 0,
   "taskRetryCount": 0,
+  "featureRetryCount": 0,
+  "phaseRetryCount": 0,
   "pipelineIteration": 0,
-  "gateHistory": [],
-  "supervisor": {
-    "enabled": false,
-    "apiRetries": 5,
-    "backoffMs": 60000,
-    "lastHeartbeat": null,
-    "status": "idle"
-  }
+  "gateHistory": []
 }
 ```
 

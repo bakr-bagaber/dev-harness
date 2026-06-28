@@ -29,17 +29,21 @@ Use `--agent-tool` at init to generate tool-specific instruction files:
 # AGENTS.md only (works with any agent that reads it)
 dev-harness init --stack node
 
-# Generate a skill manifest (SKILL.md + wrapper scripts)
+# Generate tool-specific instruction file (replica of AGENTS.md)
+dev-harness init --stack node --agent-tool claude-code  # → CLAUDE.md
+dev-harness init --stack node --agent-tool cursor       # → .cursorrules
+
+# Generate SKILL.md manifest format (for agents that use the skill format)
 dev-harness init --stack node --agent-tool skill
 
 # Multiple tools (comma-separated)
-dev-harness init --stack node --agent-tool skill,skill2
+dev-harness init --stack node --agent-tool claude-code,cursor
 
 # All supported tools
 dev-harness init --stack node --agent-tool all
 ```
 
-> **All instruction files are generated from `AGENTS.md` content** — single source of truth.
+> **All instruction files are generated from `AGENTS.md` content** — single source of truth. `CLAUDE.md` and `.cursorrules` are replicas with a tool-specific header. `skill` is a manifest format (SKILL.md + wrapper scripts), not a tool name.
 
 ## Adapter Architecture
 
@@ -69,10 +73,12 @@ Dev Harness enforces the workflow through the CLI backend:
 |-------------|-----------|-----|
 | **Gate validation** | `dev-harness validate` | Runs deterministic checks per phase — must pass before advancing |
 | **Phase order** | `dev-harness phase next` | Enforces define→plan→build→verify→review→ship — can't skip |
-| **State tracking** | `harness/config.json` | Tracks current phase, feature, task, retry counts |
-| **Role gates** | `dev-harness role` | BUILD/VERIFY validate requires evaluator; contract propose requires planner |
-| **Self-eval guard** | `producedByRole` tracking | Evaluator can't validate work they produced |
-| **Instructions** | `AGENTS.md` + phase skills | Agent tools natively read instruction files |
+| **State tracking** | `harness/config.json` | Tracks current phase, feature, task, role, retry counters (task/feature/phase), gate history |
+| **Role gates** | `dev-harness role` | BUILD/VERIFY validate requires evaluator; DEFINE task-level requires planner; contract propose requires planner; contract review requires evaluator |
+| **Self-eval guard** | `producedByRole` tracking | Generator cannot evaluate its own work — if `producedByRole === currentRole`, validation is blocked |
+| **Pass criteria (3 levels)** | Task (`acceptanceCriteria`), feature (`definitionOfDone`), phase (`Verification Criteria`) | All must be non-empty + non-placeholder before advancing |
+| **Personas** | `agents.tone.*` | Injected into `role` command output per role |
+| **Instructions** | `AGENTS.md` + phase skills | `CLAUDE.md` and `.cursorrules` are replicas of `AGENTS.md` generated at init |
 
 The agent cannot advance without:
 1. Passing gates (`validate` returns PASS)
@@ -111,7 +117,7 @@ The harness implements a planner/generator/evaluator/simplifier committee via
    - `validate` in BUILD/VERIFY requires `currentRole=evaluator` (G21)
    - `contract propose` requires `currentRole=planner` (G21)
    - `contract review` requires `currentRole=evaluator` (G21)
-4. Self-evaluation guard (G23): evaluator can't validate work they produced (`producedByRole === currentRole` → blocked)
+4. Self-evaluation guard (G23): generator cannot evaluate its own work (`producedByRole === currentRole` → blocked)
 
 ### Role transition = session boundary
 
@@ -129,24 +135,53 @@ Fresh-context boundaries depend on agent tool capabilities.
 ### Agents that support session-end-on-completion — full enforcement
 
 Agents that support `--exit-on-complete` + `--fresh-session` can enforce a full
-fresh-context boundary via an external shell loop (the "Ralph loop"):
+fresh-context boundary via an external shell loop (the "Ralph loop").
+
+Dev Harness ships two ready-to-use Ralph loop scripts in `dist/`:
+
+- **`dist/run-hermes.sh`** — Ralph loop for Hermes
+- **`dist/run-openclaw.sh`** — Ralph loop for OpenClaw
+
+Each script:
+1. Clocks in (`dev-harness status`) to get current phase, feature, task, role
+2. Builds a task prompt from the current state
+3. Runs the agent with `--fresh-session --exit-on-complete` (no context carryover)
+4. Checks gates (`dev-harness validate`)
+5. Advances if gates pass (`dev-harness phase next`)
+6. Repeats until pipeline complete or max iterations reached
+
+```bash
+# Run with Hermes
+./dist/run-hermes.sh /path/to/project
+
+# Run with OpenClaw
+./dist/run-openclaw.sh /path/to/project
+
+# Verbose mode
+VERBOSE=1 ./dist/run-hermes.sh
+
+# Custom max iterations
+MAX_ITERATIONS=50 ./dist/run-openclaw.sh
+```
+
+Or write your own loop:
 
 ```bash
 #!/bin/bash
-# Ralph loop — fresh context per task, full enforcement
 cd /path/to/project
 
-while ! dev-harness status --json | grep -q '"status":"complete"'; do
-  # Get the next action from the handoff
-  NEXT=$(dev-harness status --json | jq -r .nextAction)
+while ! dev-harness status --json | jq -e '.status == "complete"' >/dev/null 2>&1; do
+  STATUS=$(dev-harness status --json)
+  PHASE=$(echo "$STATUS" | jq -r '.currentPhase')
+  FEATURE=$(echo "$STATUS" | jq -r '.currentFeature // "null"')
+  TASK=$(echo "$STATUS" | jq -r '.currentTask // "null"')
 
-  # Run your agent with a FRESH session (no context carryover)
-  your-agent --task "$NEXT" --fresh-session --exit-on-complete
+  # Run agent with FRESH session
+  your-agent --task "Phase: $PHASE, Feature: $FEATURE, Task: $TASK" \
+    --fresh-session --exit-on-complete
 
-  # Validate the work
+  # Validate and advance
   dev-harness validate --json
-
-  # Advance if gates pass
   dev-harness phase next --json
 done
 ```
