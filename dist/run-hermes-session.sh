@@ -1,39 +1,39 @@
 #!/usr/bin/env bash
 #
-# run-openclaw.sh — Ralph loop for OpenClaw agent with fresh-session enforcement.
+# run-hermes.sh — Session-enforcement wrapper for Hermes agent with fresh-session enforcement.
 #
-# Runs OpenClaw in a loop, each iteration in a FRESH session (no context carryover).
-# The dev-harness CLI drives the pipeline; OpenClaw does the work per task.
+# Runs Hermes in a loop, each iteration in a FRESH session (no context carryover).
+# The dev-harness CLI drives the pipeline; Hermes does the work per task.
 # Every transition (task, feature, phase, role) happens in a new session.
 #
 # Usage:
-#   ./run-openclaw.sh [project-dir]
+#   ./run-hermes.sh [project-dir]
 #
 # If no project-dir is given, uses current directory.
 # Requires: dev-harness CLI installed (npm install -g dev-harness-cli)
-# Requires: openclaw CLI available in PATH
+# Requires: hermes CLI available in PATH
 # Requires: jq for JSON parsing
 #
 # Environment variables:
-#   OPENCLAW_BIN  — path to openclaw binary (default: openclaw)
-#   DEV_HARNESS   — path to dev-harness CLI (default: dev-harness)
+#   HERMES_BIN     — path to hermes binary (default: hermes)
+#   DEV_HARNESS    — path to dev-harness CLI (default: dev-harness)
 #   MAX_ITERATIONS — safety limit (default: 100)
-#   VERBOSE       — set to 1 for verbose output
+#   VERBOSE        — set to 1 for verbose output
 
 set -euo pipefail
 
 PROJECT_DIR="${1:-.}"
-OPENCLAW_BIN="${OPENCLAW_BIN:-openclaw}"
+HERMES_BIN="${HERMES_BIN:-hermes}"
 DEV_HARNESS="${DEV_HARNESS:-dev-harness}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-100}"
 VERBOSE="${VERBOSE:-0}"
 
-log() { echo "[run-openclaw] $*"; }
-vlog() { [ "$VERBOSE" = "1" ] && echo "[run-openclaw:verbose] $*" || true; }
+log() { echo "[run-hermes] $*"; }
+vlog() { [ "$VERBOSE" = "1" ] && echo "[run-hermes:verbose] $*" || true; }
 
 # Verify dependencies
 command -v jq >/dev/null 2>&1 || { echo "Error: jq is required"; exit 1; }
-command -v "$OPENCLAW_BIN" >/dev/null 2>&1 || { echo "Error: $OPENCLAW_BIN not found in PATH"; exit 1; }
+command -v "$HERMES_BIN" >/dev/null 2>&1 || { echo "Error: $HERMES_BIN not found in PATH"; exit 1; }
 command -v "$DEV_HARNESS" >/dev/null 2>&1 || { echo "Error: $DEV_HARNESS not found in PATH"; exit 1; }
 
 cd "$PROJECT_DIR"
@@ -41,10 +41,10 @@ cd "$PROJECT_DIR"
 # Verify this is a harness project
 [ -f "harness/config.json" ] || { echo "Error: not a dev-harness project (no harness/config.json)"; exit 1; }
 
-log "Starting Ralph loop with OpenClaw"
+log "Starting session-enforcement loop with Hermes"
 log "Project: $(pwd)"
-log "OpenClaw: $($OPENCLAW_BIN --version 2>/dev/null || echo 'unknown')"
-log "Harness:  $($DEV_HARNESS --version)"
+log "Hermes:  $($HERMES_BIN --version 2>/dev/null || echo 'unknown')"
+log "Harness: $($DEV_HARNESS --version)"
 
 ITERATION=0
 while [ "$ITERATION" -lt "$MAX_ITERATIONS" ]; do
@@ -70,7 +70,7 @@ while [ "$ITERATION" -lt "$MAX_ITERATIONS" ]; do
     exit 0
   fi
 
-  # Determine the task for OpenClaw
+  # Determine the task for Hermes
   # Build a task prompt from the current state
   TASK_PROMPT="You are working on a dev-harness project. Current state:
 - Phase: $CURRENT_PHASE
@@ -84,22 +84,22 @@ Follow the workflow: do the work, then call 'dev-harness validate' to check gate
 If gates pass, call 'dev-harness phase next' to advance.
 If you are in BUILD phase with a specific feature/task, call 'dev-harness validate --feature $CURRENT_FEATURE --task $CURRENT_TASK'."
 
-  # Run OpenClaw with a FRESH session (no context carryover)
+  # Run Hermes with a FRESH session (no context carryover)
   # --fresh-session: start a new session with no prior context
   # --exit-on-complete: exit when the task is done (enables the loop)
-  log "Starting OpenClaw session $ITERATION (phase=$CURRENT_PHASE, role=$CURRENT_ROLE)"
+  log "Starting Hermes session $ITERATION (phase=$CURRENT_PHASE, role=$CURRENT_ROLE)"
   vlog "Task prompt: $TASK_PROMPT"
 
-  $OPENCLAW_BIN \
+  $HERMES_BIN \
     --task "$TASK_PROMPT" \
     --fresh-session \
     --exit-on-complete \
-    2>&1 | while IFS= read -r line; do echo "[openclaw] $line"; done
+    2>&1 | while IFS= read -r line; do echo "[hermes] $line"; done
 
-  OPENCLAW_EXIT=$?
-  vlog "OpenClaw exited with code $OPENCLAW_EXIT"
+  HERMES_EXIT=$?
+  vlog "Hermes exited with code $HERMES_EXIT"
 
-  # After OpenClaw exits, check if gates pass and advance
+  # After Hermes exits, check if gates pass and advance
   log "Checking gates..."
   VALIDATE_JSON=$("$DEV_HARNESS" validate --json 2>/dev/null || echo '{}')
   GATES_PASS=$(echo "$VALIDATE_JSON" | jq -r '.overall // false')
@@ -108,7 +108,7 @@ If you are in BUILD phase with a specific feature/task, call 'dev-harness valida
     log "Gates passed. Advancing to next phase."
     "$DEV_HARNESS" phase next --json 2>/dev/null || true
   else
-    log "Gates failed or not all work done. OpenClaw will retry in next iteration."
+    log "Gates failed or not all work done. Hermes will retry in next iteration."
     FAILURES=$(echo "$VALIDATE_JSON" | jq -r '.failures // [] | join(", ")')
     [ -n "$FAILURES" ] && log "Failures: $FAILURES"
   fi

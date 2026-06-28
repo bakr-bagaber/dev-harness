@@ -135,12 +135,12 @@ Fresh-context boundaries depend on agent tool capabilities.
 ### Agents that support session-end-on-completion — full enforcement
 
 Agents that support `--exit-on-complete` + `--fresh-session` can enforce a full
-fresh-context boundary via an external shell loop (the "Ralph loop").
+fresh-context boundary via an external shell loop (the "session-enforcement loop").
 
-Dev Harness ships two ready-to-use Ralph loop scripts in `dist/`:
+Dev Harness ships two ready-to-use session-enforcement scripts in `dist/`:
 
-- **`dist/run-hermes.sh`** — Ralph loop for Hermes
-- **`dist/run-openclaw.sh`** — Ralph loop for OpenClaw
+- **`dist/run-hermes-session.sh`** — Session-enforcement wrapper for Hermes
+- **`dist/run-openclaw-session.sh`** — Session-enforcement wrapper for OpenClaw
 
 Each script:
 1. Clocks in (`dev-harness status`) to get current phase, feature, task, role
@@ -152,16 +152,16 @@ Each script:
 
 ```bash
 # Run with Hermes
-./dist/run-hermes.sh /path/to/project
+./dist/run-hermes-session.sh /path/to/project
 
 # Run with OpenClaw
-./dist/run-openclaw.sh /path/to/project
+./dist/run-openclaw-session.sh /path/to/project
 
 # Verbose mode
-VERBOSE=1 ./dist/run-hermes.sh
+VERBOSE=1 ./dist/run-hermes-session.sh
 
 # Custom max iterations
-MAX_ITERATIONS=50 ./dist/run-openclaw.sh
+MAX_ITERATIONS=50 ./dist/run-openclaw-session.sh
 ```
 
 Or write your own loop:
@@ -207,4 +207,4 @@ enforcement. Fresh context is **human-controlled**:
 | Self-eval guard (G23) | ✅ | ✅ |
 | Clean handoff at boundaries | ✅ | ✅ |
 | Clean-state gate (G17) | ✅ | ✅ |
-| Fresh context per session | ❌ (human-controlled) | ✅ (via Ralph loop) |
+| Fresh context per session | ❌ (human-controlled) | ✅ (via session-enforcement loop) |
