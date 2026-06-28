@@ -8,8 +8,8 @@
  *   branch <checkpoint> — Create recovery branch at checkpoint
  *
  * Supports tag patterns:
- *   phase/<name>     — Phase completion tags (set by outer loop)
- *   iter/<N>         — Iteration tags (set by inner loop)
+ *   phase/<name>     — Phase completion tags (set by phase loop)
+ *   iter/<N>         — Iteration tags (set by task loop)
  *   manual/<label>   — User-created manual checkpoints
  *   recovery/*       — Recovery branches (for informational display)
  *

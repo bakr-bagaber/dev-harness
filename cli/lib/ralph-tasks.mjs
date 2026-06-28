@@ -1,5 +1,5 @@
 /**
- * ralph-inner — Inner Ralph Loop Engine.
+ * ralph-tasks — Task Ralph Loop Engine.
  *
  * Runs the work → validate → pass/retry loop for every phase.
  * Two modes:
@@ -9,7 +9,7 @@
  * The engine prints instructions for the agent. It does NOT do the work itself.
  *
  * Usage:
- *   import { runPhase } from './ralph-inner.mjs';
+ *   import { runPhase } from './ralph-tasks.mjs';
  *   const result = runPhase('/path/to/project', 'build');
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -219,11 +219,11 @@ export async function runPhase(targetDir, phase, options = {}) {
     if (retryCfg.tasks.enabled && taskRetryCount >= retryCfg.tasks.maxRetries) {
       // Task exhausted → feature level
       if (retryCfg.features.enabled && featureRetryCount >= retryCfg.features.maxRetries) {
-        // Feature exhausted → signal outer loop (do NOT escalate to human here)
+        // Feature exhausted → signal phase loop (do NOT escalate to human here)
         return {
           ok: false,
           status: 'feature-exhausted',
-          message: `Feature retries exhausted (${featureRetryCount}/${retryCfg.features.maxRetries}) for phase "${phase}" after task retries (${taskRetryCount}/${retryCfg.tasks.maxRetries}). Signaling outer loop for phase retry or escalation.`,
+          message: `Feature retries exhausted (${featureRetryCount}/${retryCfg.features.maxRetries}) for phase "${phase}" after task retries (${taskRetryCount}/${retryCfg.tasks.maxRetries}). Signaling phase loop for phase retry or escalation.`,
           phase,
           iteration: featureRetryCount,
           mode,
@@ -231,11 +231,11 @@ export async function runPhase(targetDir, phase, options = {}) {
         };
       }
       if (!retryCfg.features.enabled) {
-        // Feature retry disabled → signal outer loop immediately
+        // Feature retry disabled → signal phase loop immediately
         return {
           ok: false,
           status: 'feature-exhausted',
-          message: `Task retries exhausted (${taskRetryCount}/${retryCfg.tasks.maxRetries}) for phase "${phase}" and feature retry is disabled. Signaling outer loop for phase retry or escalation.`,
+          message: `Task retries exhausted (${taskRetryCount}/${retryCfg.tasks.maxRetries}) for phase "${phase}" and feature retry is disabled. Signaling phase loop for phase retry or escalation.`,
           phase,
           iteration: taskRetryCount,
           mode,
@@ -251,7 +251,7 @@ export async function runPhase(targetDir, phase, options = {}) {
       return {
         ok: false,
         status: 'deliverable-exhausted',
-        message: `Phase retries exhausted (${phaseRetryCount}/${retryCfg.phases.maxRetries}) for deliverable phase "${phase}". Signaling outer loop for escalation.`,
+        message: `Phase retries exhausted (${phaseRetryCount}/${retryCfg.phases.maxRetries}) for deliverable phase "${phase}". Signaling phase loop for escalation.`,
         phase,
         iteration: phaseRetryCount,
         mode,
@@ -263,7 +263,7 @@ export async function runPhase(targetDir, phase, options = {}) {
       return {
         ok: false,
         status: 'deliverable-exhausted',
-        message: `Retries exhausted (${retryCount}/${retryCfg.tasks.maxRetries}) for deliverable phase "${phase}" and phase retry is disabled. Signaling outer loop for escalation.`,
+        message: `Retries exhausted (${retryCount}/${retryCfg.tasks.maxRetries}) for deliverable phase "${phase}" and phase retry is disabled. Signaling phase loop for escalation.`,
         phase,
         iteration: retryCount,
         mode,

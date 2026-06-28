@@ -10,7 +10,7 @@ import { resolve, basename } from 'node:path';
 import { detectStack } from '../lib/detect-stack.mjs';
 import { loadConfig } from '../lib/state.mjs';
 import { readLessons, readHandoff, readProgressTail, readDecisionsTail } from '../lib/progress.mjs';
-import { loadFeatureList, getNextFeature } from '../lib/ralph-inner.mjs';
+import { loadFeatureList, getNextFeature } from '../lib/ralph-tasks.mjs';
 import { runChecks, areGatesEnabled } from '../lib/gates.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
 

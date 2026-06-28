@@ -2,7 +2,7 @@
  * file-io — Centralized JSON and text file I/O helpers.
  *
  * Standardizes the readFileSync + JSON.parse + try/catch pattern duplicated
- * across state.mjs, contract.mjs, detect-stack.mjs, ralph-inner.mjs, etc.
+ * across state.mjs, contract.mjs, detect-stack.mjs, ralph-tasks.mjs, etc.
  * All helpers return result objects ({ ok, data, error }) and never throw.
  *
  * Usage:

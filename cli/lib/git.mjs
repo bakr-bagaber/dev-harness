@@ -187,7 +187,7 @@ export async function createGitTag(tag, message, cwd) {
 
 /**
  * Hard reset to HEAD and remove untracked/ignored files (fresh context).
- * Used by the Ralph inner loop when --git-ops is enabled.
+ * Used by the Ralph task loop when --git-ops is enabled.
  * @param {string} cwd
  * @returns {Promise<{ ok: boolean, error: string|null }>}
  */

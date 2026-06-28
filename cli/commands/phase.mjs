@@ -1,8 +1,8 @@
 /**
  * phase — Invoke a phase by name.
  *
- * Transitions the state machine, runs the inner loop,
- * then triggers the outer loop for autopilot advancement.
+ * Transitions the state machine, runs the task loop,
+ * then triggers the phase loop for autopilot advancement.
  *
  * Usage:
  *   dev-harness phase <name>
@@ -10,8 +10,8 @@
  */
 import { CliError, EXIT, die } from '../lib/errors.mjs';
 import { transitionPhase, getPhaseOrder, loadConfig } from '../lib/state.mjs';
-import { runPhase, getPhaseType } from '../lib/ralph-inner.mjs';
-import { continuePipeline } from '../lib/ralph-outer.mjs';
+import { runPhase, getPhaseType } from '../lib/ralph-tasks.mjs';
+import { continuePipeline } from '../lib/ralph-phases.mjs';
 import { promptYesNo, shouldConfirmGates, shouldAutoPrompt } from '../lib/modes.mjs';
 import { parseCommandArgs, phaseLabel } from '../lib/command-helpers.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
@@ -122,7 +122,7 @@ export default async function phaseCommand(args) {
 
   // Render dashboard showing current pipeline state
 
-  // Run the inner loop for this phase
+  // Run the task loop for this phase
   const loopResult = await runPhase(targetDir, phase, { json, gitOps });
 
   if (!loopResult.ok) {
@@ -133,7 +133,7 @@ export default async function phaseCommand(args) {
     return;
   }
 
-  // ── Phase complete — trigger outer loop ──────────────────────────────
+  // ── Phase complete — trigger phase loop ──────────────────────────────
   const order = getPhaseOrder(transitionResult.config?.phases?.enabled);
   const phaseIdx = order.indexOf(phase);
   const nextPhase = (phaseIdx >= 0 && phaseIdx < order.length - 1) ? order[phaseIdx + 1] : null;

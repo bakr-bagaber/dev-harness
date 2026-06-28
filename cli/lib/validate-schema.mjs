@@ -7,7 +7,7 @@
  * format, oneOf/anyOf/allOf, if/then/else, pattern, minLength, etc.
  *
  * Public API is unchanged from the previous hand-rolled version so
- * callers (state.mjs, ralph-inner.mjs) need no edits:
+ * callers (state.mjs, ralph-tasks.mjs) need no edits:
  *
  *   import { validateAgainstSchema } from './validate-schema.mjs';
  *   const result = validateAgainstSchema(obj, '/path/to/schema.json');

@@ -1,19 +1,19 @@
 /**
- * ralph-outer — Outer Ralph Loop Engine.
+ * ralph-phases — Phase Ralph Loop Engine.
  *
  * Advances through the phase pipeline in order. In copilot mode,
  * runs one phase and stops. In autopilot mode, auto-advances
  * through all remaining phases after each gate passes.
  *
- * The outer loop does NOT iterate tasks or features — that's
- * entirely the inner loop's job (T8).
+ * The phase loop does NOT iterate tasks or features — that's
+ * entirely the task loop's job (T8).
  *
  * Usage:
- *   import { continuePipeline, runAutopilot } from './ralph-outer.mjs';
+ *   import { continuePipeline, runAutopilot } from './ralph-phases.mjs';
  *   const result = continuePipeline('/path/to/project', 'build');
  */
 import { loadConfig, transitionPhase, set as stateSet, getPhaseOrder, getRetryConfig, incrementPhaseRetry, resetPhaseRetry } from './state.mjs';
-import { runPhase, loadFeatureList } from './ralph-inner.mjs';
+import { runPhase, loadFeatureList } from './ralph-tasks.mjs';
 import { existsSync } from 'node:fs';
 import { execGit } from './git.mjs';
 
@@ -124,7 +124,7 @@ export async function continuePipeline(targetDir, completedPhase, options = {}) 
   }
 
   // ── Autopilot mode ────────────────────────────────────────────────────
-  // Auto-advance: transition to next phase and run inner loop
+  // Auto-advance: transition to next phase and run task loop
 
   // Re-check pause before auto-advancing (user may have paused during phase execution)
   if (config.paused) {
@@ -158,7 +158,7 @@ export async function continuePipeline(targetDir, completedPhase, options = {}) 
     };
   }
 
-  // Run inner loop for next phase
+  // Run task loop for next phase
   const loopResult = await runPhase(targetDir, nextPhase, { json });
 
   if (loopResult.status === 'escalated') {
@@ -180,7 +180,7 @@ export async function continuePipeline(targetDir, completedPhase, options = {}) 
 
   // ── v3.1.0+ phase retry escalation ──────────────────────────────────────
   // Inner loop signaled feature-exhausted (feature-iterate phases) or
-  // deliverable-exhausted (deliverable-retry phases). The outer loop owns
+  // deliverable-exhausted (deliverable-retry phases). The phase loop owns
   // phase retry: if retry.phases.enabled and under budget, reset all
   // features in the phase + re-run same phase. Else escalate to human.
   if (loopResult.status === 'feature-exhausted' || loopResult.status === 'deliverable-exhausted') {
@@ -204,7 +204,7 @@ export async function continuePipeline(targetDir, completedPhase, options = {}) 
             }
           }
           // Save feature list back
-          const { saveFeatureList } = await import('./ralph-inner.mjs');
+          const { saveFeatureList } = await import('./ralph-tasks.mjs');
           saveFeatureList(targetDir, fl);
         }
       } catch (_e) { /* non-fatal */ }

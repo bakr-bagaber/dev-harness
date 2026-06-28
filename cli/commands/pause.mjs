@@ -1,7 +1,7 @@
 /**
  * pause — Pause autopilot execution.
  *
- * Sets config.paused = true. The outer loop checks this
+ * Sets config.paused = true. The phase loop checks this
  * before starting a new phase in autopilot mode.
  *
  * G17: also fires the session boundary (trigger #4: pause/escalate) —

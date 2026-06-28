@@ -1,7 +1,7 @@
 # BUILD Phase
 
 ## Overview
-Implement each feature task-by-task. The inner loop iterates features and tasks,
+Implement each feature task-by-task. The task loop iterates features and tasks,
 producing instructions for each. Validate after each task before advancing.
 
 ## When to Use

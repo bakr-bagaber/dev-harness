@@ -40,12 +40,12 @@
     "currentFeature": {
       "type": ["string", "null"],
       "default": null,
-      "description": "Currently active feature ID (tracked by state machine, set by ralph-inner when picking next feature)."
+      "description": "Currently active feature ID (tracked by state machine, set by ralph-tasks when picking next feature)."
     },
     "currentTask": {
       "type": ["string", "null"],
       "default": null,
-      "description": "Currently active task ID (tracked by state machine, set by ralph-inner when picking next task)."
+      "description": "Currently active task ID (tracked by state machine, set by ralph-tasks when picking next task)."
     },,
       "default": null,
       "description": "Which agentic coding tool the project uses (null = unspecified, tools auto-detect via AGENTS.md)"

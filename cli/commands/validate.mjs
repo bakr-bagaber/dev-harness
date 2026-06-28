@@ -20,8 +20,8 @@ import { resolve } from 'node:path';
 import { die, CliError, EXIT } from '../lib/errors.mjs';
 import { runChecks, getPhase, areGatesEnabled, checkRoleForValidate, checkSelfEvaluationGuard, checkCleanState, checkFeatureCriteria } from '../lib/gates.mjs';
 import { loadConfig, set as configSet, syncFeatureSummary, resetTaskRetry, resetFeatureRetry } from '../lib/state.mjs';
-import { continuePipeline } from '../lib/ralph-outer.mjs';
-import { loadFeatureList, saveFeatureList, runPhase, getNextFeature, getNextTask } from '../lib/ralph-inner.mjs';
+import { continuePipeline } from '../lib/ralph-phases.mjs';
+import { loadFeatureList, saveFeatureList, runPhase, getNextFeature, getNextTask } from '../lib/ralph-tasks.mjs';
 import { fireSessionBoundary } from '../lib/session-boundary.mjs';
 import { phaseLabel } from '../lib/command-helpers.mjs';
 import { emitJson, emitHuman } from '../lib/output.mjs';
@@ -62,7 +62,7 @@ export default async function validateCommand(args) {
     return;
   }
 
-  // Feature/task scoping for inner-loop per-task validation
+  // Feature/task scoping for task-loop per-task validation
   // NOTE: gates.mjs currently runs full phase-level checks.
   // Per-feature/task filtering should be implemented when the
   // gate engine grows feature-aware check functions (T8 follow-up).
@@ -169,13 +169,13 @@ export default async function validateCommand(args) {
         }
         configSet(targetDir, 'taskRetryCount', 0);
       } else if (currentTaskRetry >= taskMax) {
-        // Task exhausted + feature retry disabled → pause; outer loop escalates
+        // Task exhausted + feature retry disabled → pause; phase loop escalates
         configSet(targetDir, 'paused', true);
         out.escalated = { task, retries: currentTaskRetry, maxRetries: taskMax };
       }
     }
 
-    // Feature/task-scoped validation passing — mark task complete, advance inner loop
+    // Feature/task-scoped validation passing — mark task complete, advance task loop
     if (result.overall && feature && task) {
       const fl = loadFeatureList(targetDir);
       const feat = fl.features ? fl.features.find(f => f.id === feature) : null;
@@ -303,7 +303,7 @@ export default async function validateCommand(args) {
     }
   }
 
-  // Feature/task-scoped validation passing — mark task complete, advance inner loop
+  // Feature/task-scoped validation passing — mark task complete, advance task loop
   if (result.overall && feature && task) {
     const fl = loadFeatureList(targetDir);
     const feat = fl.features ? fl.features.find(f => f.id === feature) : null;
@@ -348,7 +348,7 @@ export default async function validateCommand(args) {
       // Non-fatal.
     }
     // Render updated dashboard showing task completion + next task
-    // Run inner loop to get next feature/task instructions
+    // Run task loop to get next feature/task instructions
     // runPhase prints the instructions to stdout
     const nextResult = await runPhase(targetDir, phase, { json: false });
     if (nextResult.status === 'complete') {

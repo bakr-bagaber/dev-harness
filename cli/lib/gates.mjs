@@ -789,7 +789,7 @@ export function getPhaseChecks(phase) {
  * Run all checks for a given phase.
  *
  * When `options.feature` + `options.task` are provided (per-task validation,
- * called by the inner loop), checks are scoped to task-applicable checks only
+ * called by the task loop), checks are scoped to task-applicable checks only
  * (lint, tests, coverage) — phase-level checks like git-clean and
  * contract-agreed are skipped. This fixes G1: previously gates always ran at
  * phase granularity regardless of --feature/--task.

@@ -41,7 +41,7 @@ export function parseCommandArgs(args) {
 
 /**
  * Format a phase name for display (uppercase, or UNKNOWN if null).
- * Centralized here to avoid 3× duplication across ralph-inner/validate/phase.
+ * Centralized here to avoid 3× duplication across ralph-tasks/validate/phase.
  * @param {string|null} phase
  * @returns {string}
  */
