@@ -1798,9 +1798,9 @@
       "failed": 0
     }
   ],
-  "startedAt": "2026-06-28T07:55:23.729Z",
-  "cli": "node /tmp/dev-harness-sync/cli/dev-harness.mjs",
-  "endedAt": "2026-06-28T07:56:45.931Z",
+  "startedAt": "2026-06-28T06:24:26.881Z",
+  "cli": "node /home/bakrb/ops/Projects/dev-harness/cli/dev-harness.mjs",
+  "endedAt": "2026-06-28T06:25:50.254Z",
   "totalPassed": 437,
   "totalFailed": 0,
   "failures": []
