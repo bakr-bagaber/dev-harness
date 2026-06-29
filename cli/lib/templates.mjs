@@ -139,6 +139,8 @@ function mapTemplateOutput(relPath) {
   if (harnessRootFiles.includes(relPath)) return `harness/${relPath}`;
   // init scripts → harness/scripts/
   if (relPath === 'init.sh' || relPath === 'init.ps1') return `harness/scripts/${relPath}`;
+  // scripts/ → harness/scripts/ (session-enforcement wrappers)
+  if (relPath.startsWith('scripts/')) return `harness/${relPath}`;
   // ci/ → harness/ci/
   if (relPath.startsWith('ci/')) return `harness/${relPath}`;
   // docs/ → harness/docs/

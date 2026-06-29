@@ -182,8 +182,27 @@ transition, task/feature complete, pause). Advisory by default; fatal via
 
 ## Session Restart Enforcement (G25)
 
-Agents that support `--exit-on-complete` + `--fresh-session`, enabling full
-fresh-context enforcement via an external shell loop (the "Ralph loop"):
+Agents that support `--exit-on-complete` + `--fresh-session` can enforce full
+fresh-context boundaries. Dev Harness scaffolds two ready-to-use session-enforcement
+scripts into every project at `harness/scripts/`:
+
+- **`harness/scripts/run-hermes-session.sh`** — wrapper for Hermes agent
+- **`harness/scripts/run-openclaw-session.sh`** — wrapper for OpenClaw agent
+
+Each script loops: clock-in → run agent with fresh session → validate → advance → repeat.
+
+```bash
+# Run with Hermes (from project root)
+./harness/scripts/run-hermes-session.sh
+
+# Run with OpenClaw
+./harness/scripts/run-openclaw-session.sh
+
+# Verbose + custom max iterations
+VERBOSE=1 MAX_ITERATIONS=50 ./harness/scripts/run-hermes-session.sh
+```
+
+Or write your own loop:
 
 ```bash
 while ! dev-harness status --json | grep -q '"status":"complete"'; do

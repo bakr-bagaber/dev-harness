@@ -1,6 +1,6 @@
 {
   "name": "dev-harness-cli",
-  "version": "4.2.2",
+  "version": "4.2.3",
   "description": "Agent-agnostic development harness — CLI backend for AI coding agents. Scaffold, phase orchestration, gate validation for any agent tool",
   "type": "module",
   "bin": {

@@ -137,10 +137,11 @@ Fresh-context boundaries depend on agent tool capabilities.
 Agents that support `--exit-on-complete` + `--fresh-session` can enforce a full
 fresh-context boundary via an external shell loop (the "session-enforcement loop").
 
-Dev Harness ships two ready-to-use session-enforcement scripts in `dist/`:
+Dev Harness ships two ready-to-use session-enforcement scripts, scaffolded into
+every project at `harness/scripts/` during `dev-harness init`:
 
-- **`dist/run-hermes-session.sh`** — Session-enforcement wrapper for Hermes
-- **`dist/run-openclaw-session.sh`** — Session-enforcement wrapper for OpenClaw
+- **`harness/scripts/run-hermes-session.sh`** — Session-enforcement wrapper for Hermes
+- **`harness/scripts/run-openclaw-session.sh`** — Session-enforcement wrapper for OpenClaw
 
 Each script:
 1. Clocks in (`dev-harness status`) to get current phase, feature, task, role
@@ -151,17 +152,17 @@ Each script:
 6. Repeats until pipeline complete or max iterations reached
 
 ```bash
-# Run with Hermes
-./dist/run-hermes-session.sh /path/to/project
+# Run with Hermes (from project root)
+./harness/scripts/run-hermes-session.sh
 
 # Run with OpenClaw
-./dist/run-openclaw-session.sh /path/to/project
+./harness/scripts/run-openclaw-session.sh
 
 # Verbose mode
-VERBOSE=1 ./dist/run-hermes-session.sh
+VERBOSE=1 ./harness/scripts/run-hermes-session.sh
 
 # Custom max iterations
-MAX_ITERATIONS=50 ./dist/run-openclaw-session.sh
+MAX_ITERATIONS=50 ./harness/scripts/run-openclaw-session.sh
 ```
 
 Or write your own loop:

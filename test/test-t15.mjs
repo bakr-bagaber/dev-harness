@@ -199,8 +199,8 @@ async function testTemplateDiscovery() {
   assertP(templateNames.includes('docs/agents/generator.md'), 'D.3 discoverTemplates finds docs/agents/generator.md');
   assertP(templateNames.includes('docs/agents/evaluator.md'), 'D.4 discoverTemplates finds docs/agents/evaluator.md');
   assertP(templateNames.includes('docs/agents/simplifier.md'), 'D.5 discoverTemplates finds docs/agents/simplifier.md');
-  // 13 base templates + 7 phase docs (define/plan/build/verify/simplify/review/ship)
-  assertEq(files.length, 20, 'D.6 discoverTemplates returns exactly 20 files (13 base + 7 phase docs)');
+  // 13 base templates + 7 phase docs + 2 session-enforcement scripts = 22
+  assertEq(files.length, 22, 'D.6 discoverTemplates returns exactly 22 files (13 base + 7 phase docs + 2 session scripts)');
 
   if (verbose) console.log('  ✓ Template discovery (6)');
 }

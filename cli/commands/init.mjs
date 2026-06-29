@@ -184,6 +184,8 @@ export default async function initCommand(args) {
   // Template files — known template names (mapped to harness/ paths by templates.mjs)
   const templateNames = [
     'AGENTS.md', 'harness/config.json', 'harness/scripts/init.sh',
+    'harness/scripts/run-hermes-session.sh',
+    'harness/scripts/run-openclaw-session.sh',
     'harness/progress.md', 'harness/sprint-contract.md', 'harness/evaluator-rubric.md',
   ];
   for (const name of templateNames) {

@@ -478,7 +478,9 @@ my-project/
 │   ├── sprint-contract.md       # Pre-build agreement (with ## Verification Criteria)
 │   ├── evaluator-rubric.md      # Quality scorecard (6 dimensions)
 │   ├── scripts/
-│   │   └── init.sh              # Install → verify → start
+│   │   ├── init.sh              # Install → verify → start
+│   │   ├── run-hermes-session.sh    # Session-enforcement loop (Hermes)
+│   │   └── run-openclaw-session.sh  # Session-enforcement loop (OpenClaw)
 │   └── docs/
 │       ├── phases/              # Phase skill files (addyosmani anatomy)
 │       │   ├── define.md
